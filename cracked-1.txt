@@ -1,0 +1,5325 @@
+while not game:IsLoaded() do
+    task.wait(0.1)
+end
+local ac = (gethui and gethui()) or game:GetService("CoreGui")
+local bu = game:GetService("RunService")
+local bo = game:GetService("Players")
+local co = game:GetService("UserInputService")
+local bd = game:GetService("Lighting")
+local cl = game:GetService("TweenService")
+local cx = game:GetService("VirtualInputManager")
+local ay = game:GetService("HttpService")
+local bs = game:GetService("ReplicatedStorage")
+local br = game:GetService("ReplicatedFirst")
+local cb = game:GetService("SoundService")
+local cd = game:GetService("Stats")
+local u = workspace.CurrentCamera
+local bg = bo.LocalPlayer
+local nx = ac:FindFirstChild("dangbroitsloaded")
+if nx then
+    return 
+end
+local qo = Instance.new("BoolValue", ac)
+qo.Name = "dangbroitsloaded"
+
+local ak = loadstring(game:HttpGet("https://pastebin.com/raw/RYGKEA0E"))()
+local bl = ak:CreateNotifier()
+;
+local tx = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+local bc = loadstring(game:HttpGet('https://pastebin.com/raw/SJsCacsE'))()
+local ci = loadstring(game:HttpGet('https://pastebin.com/raw/gbkEdjTd'))()
+local bx = loadstring(game:HttpGet('https://pastebin.com/raw/Nv2YZK8R'))()
+if bx and bx.Parser and not bx.Parser['Input'] then
+    bx.Parser['Input'] = {
+        Save = function(mr, qt)
+            return {
+                type = 'Input',
+                idx = mr,
+                text = qt.Value,
+            }
+        end,
+        Load = function(mr, hu)
+            if Options[mr] and type(hu.text) == 'string' then
+                Options[mr]:SetValue(hu.text)
+            end
+        end,
+    }
+end
+local function np()
+    return co.TouchEnabled and not co.KeyboardEnabled
+end
+local function ns()
+    if type(isrbxactive) ~= "function" then
+        return true
+    end
+    local qu, dk = pcall(isrbxactive)
+    return qu and dk == true
+end
+local function um(jd, je)
+    local kr = workspace:FindFirstChild("World")
+    if not kr then
+        return false
+    end
+    kr = kr:FindFirstChild("FX")
+    if not kr then
+        return false
+    end
+    if not kr:FindFirstChild("ViewModel") then
+        return false
+    end
+    if jd == 0 and je == 0 then
+        return true
+    end
+    local yk = workspace.CurrentCamera.ViewportSize
+    local gd, ge = yk.X / 2, yk.Y / 2
+    if np() then
+        pcall(function()
+            cx:SendTouchEvent(0, 0, gd, ge)
+            task.wait()
+            cx:SendTouchEvent(0, 1, gd + jd * 2, ge + je * 2)
+            task.wait()
+            cx:SendTouchEvent(0, 2, gd + jd * 2, ge + je * 2)
+        end)
+        return true
+    else
+        if ns() and type(mousemoverel) == "function" then
+            mousemoverel(jd, je)
+            return true
+        end
+    end
+    return false
+end
+local function ul(mh)
+    local qr = tick()
+    local kr = workspace:FindFirstChild("World")
+    if not kr then
+        return false
+    end
+    kr = kr:FindFirstChild("FX")
+    if not kr then
+        return false
+    end
+    if not kr:FindFirstChild("ViewModel") then
+        return false
+    end
+    if np() then
+        pcall(function()
+            local yk = workspace.CurrentCamera.ViewportSize
+            local gc = Vector2.new(yk.X / 2, yk.Y / 2)
+            cx:SendTouchEvent(0, 0, gc.X, gc.Y)
+            if mh and mh > 0 then
+                task.wait(mh)
+            else
+                task.wait(0.05)
+            end
+            cx:SendTouchEvent(0, 2, gc.X, gc.Y)
+        end)
+        return true
+    else
+        if not ns() then
+            return false
+        end
+        if type(mouse1press) == "function" and type(mouse1release) == "function" then
+            mouse1press()
+            if mh and mh > 0 then
+                task.wait(mh)
+            end
+            mouse1release()
+            return true
+        end
+        if type(mouse1click) == "function" then
+            mouse1click()
+            return true
+        end
+    end
+    return false
+end
+local bz = {
+    ["Minecraft"] = {
+        StarCount = 3000,
+        MoonTextureId = "",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "",
+        SkyboxBackContent = nil,
+        SkyboxUp = "rbxassetid://1876544642",
+        SkyboxBk = "rbxassetid://1876545003",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "rbxassetid://1876543392",
+        SkyboxDn = "rbxassetid://1876544331",
+        SkyboxDownContent = nil,
+        SkyboxFt = "rbxassetid://1876542941",
+        SkyboxRt = "rbxassetid://1876543764",
+        MoonAngularSize = 11,
+    },
+    ["Dreaming"] = {
+        StarCount = 3000,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "rbxassetid://5084576400",
+        SkyboxBk = "rbxassetid://5084575798",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "rbxassetid://5103948542",
+        SkyboxDn = "rbxassetid://5084575916",
+        SkyboxDownContent = nil,
+        SkyboxFt = "rbxassetid://5103949679",
+        SkyboxRt = "rbxassetid://5103948784",
+        MoonAngularSize = 11,
+    },
+    ["Space"] = {
+        StarCount = 0,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "[http://www.roblox.com/asset/?id=166510114",
+        SkyboxBk = "http://www.roblox.com/asset/?id=166509999",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "http://www.roblox.com/asset/?id=166510092",
+        SkyboxDn = "http://www.roblox.com/asset/?id=166510057",
+        SkyboxDownContent = nil,
+        SkyboxFt = "http://www.roblox.com/asset/?id=166510116",
+        SkyboxRt = "http://www.roblox.com/asset/?id=166510131",
+        MoonAngularSize = 11,
+    },
+    ["Cartoony"] = {
+        StarCount = 3000,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "rbxassetid://13107344387",
+        SkyboxBk = "rbxassetid://13107325341",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "rbxassetid://13107337703",
+        SkyboxDn = "rbxassetid://13107329809",
+        SkyboxDownContent = nil,
+        SkyboxFt = "rbxassetid://13107334845",
+        SkyboxRt = "rbxassetid://13107340396",
+        MoonAngularSize = 11,
+    },
+    ["Night"] = {
+        StarCount = 0,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "http://www.roblox.com/Asset/?ID=12064131",
+        SkyboxBk = "http://www.roblox.com/Asset/?ID=12064107",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "http://www.roblox.com/Asset/?ID=12063984",
+        SkyboxDn = "http://www.roblox.com/Asset/?ID=12064152",
+        SkyboxDownContent = nil,
+        SkyboxFt = "http://www.roblox.com/Asset/?ID=12064121",
+        SkyboxRt = "http://www.roblox.com/Asset/?ID=12064115",
+        MoonAngularSize = 11,
+    },
+    ["Pink"] = {
+        StarCount = 1334,
+        MoonTextureId = "rbxassetid://1345054856",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxassetid://1345009717",
+        SkyboxBackContent = nil,
+        SkyboxUp = "rbxassetid://12635316856",
+        SkyboxBk = "rbxassetid://12635309703",
+        SunAngularSize = 11,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "rbxassetid://12635313718",
+        SkyboxDn = "rbxassetid://12635311686",
+        SkyboxDownContent = nil,
+        SkyboxFt = "rbxassetid://12635312870",
+        SkyboxRt = "rbxassetid://12635315817",
+        MoonAngularSize = 11,
+    },
+    ["Red"] = {
+        StarCount = 3000,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "http://www.roblox.com/asset/?id=570555929",
+        SkyboxBk = "http://www.roblox.com/asset/?id=570555736",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "http://www.roblox.com/asset/?id=570555840",
+        SkyboxDn = "http://www.roblox.com/asset/?id=570555964",
+        SkyboxDownContent = nil,
+        SkyboxFt = "http://www.roblox.com/asset/?id=570555800",
+        SkyboxRt = "http://www.roblox.com/asset/?id=570555882",
+        MoonAngularSize = 11,
+    },
+    ["Purple"] = {
+        StarCount = 3000,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "http://www.roblox.com/asset/?id=570557727",
+        SkyboxBk = "http://www.roblox.com/asset/?id=570557514",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "http://www.roblox.com/asset/?id=570557620",
+        SkyboxDn = "http://www.roblox.com/asset/?id=570557775",
+        SkyboxDownContent = nil,
+        SkyboxFt = "http://www.roblox.com/asset/?id=570557559",
+        SkyboxRt = "http://www.roblox.com/asset/?id=570557672",
+        MoonAngularSize = 11,
+    },
+    ["Milkyway"] = {
+        StarCount = 0,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "http://www.roblox.com/asset/?id=159454288",
+        SkyboxBk = "http://www.roblox.com/asset/?id=159454299",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "http://www.roblox.com/asset/?id=159454286",
+        SkyboxDn = "http://www.roblox.com/asset/?id=159454296",
+        SkyboxDownContent = nil,
+        SkyboxFt = "http://www.roblox.com/asset/?id=159454293",
+        SkyboxRt = "http://www.roblox.com/asset/?id=159454300",
+        MoonAngularSize = 11,
+    },
+    ["Galaxy"] = {
+        StarCount = 3000,
+        MoonTextureId = "rbxasset://sky/moon.jpg",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxasset://sky/sun.jpg",
+        SkyboxBackContent = nil,
+        SkyboxUp = "rbxassetid://15983964246",
+        SkyboxBk = "rbxassetid://15983968922",
+        SunAngularSize = 21,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "rbxassetid://15983967420",
+        SkyboxDn = "rbxassetid://15983966825",
+        SkyboxDownContent = nil,
+        SkyboxFt = "rbxassetid://15983965025",
+        SkyboxRt = "rbxassetid://15983966246",
+        MoonAngularSize = 11,
+    },
+    ["Anime"] = {
+        StarCount = 5000,
+        MoonTextureId = "rbxassetid://6444320592",
+        SkyboxLeftContent = nil,
+        SkyboxFrontContent = nil,
+        CelestialBodiesShown = false,
+        SunTextureId = "rbxassetid://6196665106",
+        SkyboxBackContent = nil,
+        SkyboxUp = "http://www.roblox.com/asset/?id=104038404823203",
+        SkyboxBk = "http://www.roblox.com/asset/?id=81858382098344",
+        SunAngularSize = 11,
+        SkyboxUpContent = nil,
+        SkyboxRightContent = nil,
+        SkyboxLf = "http://www.roblox.com/asset/?id=84924000207295",
+        SkyboxDn = "http://www.roblox.com/asset/?id=138472117789684",
+        SkyboxDownContent = nil,
+        SkyboxFt = "http://www.roblox.com/asset/?id=95687237979398",
+        SkyboxRt = "http://www.roblox.com/asset/?id=99961685452126",
+        MoonAngularSize = 11,
+    },
+}
+local db = {
+    ["assault_rifle"] = {
+        ["ak47"] = {
+            "base",
+            "abyss_fang",
+            "anubis_eclipse",
+            "blood_oath",
+            "construction_hazard",
+            "cyan_royalty",
+            "divine_intervention",
+            "frost_fire",
+            "hell_forged",
+            "K2",
+            "metro_scar",
+            "mud",
+            "pink_royalty",
+            "purple_royalty",
+            "radiant_horn",
+            "red_royalty",
+            "retro_ak47",
+            "retro_scar",
+            "scar",
+            "scar_j",
+            "shipwreck",
+            "soul_lantern",
+            "spec_ops",
+            "steampunk",
+            "toy_ak47",
+            "toy_scar",
+        },
+        ["pulse_rifle"] = {
+            "base",
+            "cassette_vintage",
+            "mars_protocol",
+            "metro",
+            "synthwave_rider",
+            "techno",
+            "toy",
+            "retro",
+        },
+        ["raygun"] = {
+            "base",
+            "bubble",
+            "bushido",
+            "diner",
+            "hyper_laser",
+            "atomic",
+            "neo",
+            "retro",
+            "steam_boiler",
+        },
+        ["burst"] = {
+            "base",
+            "fortune_fever",
+            "imperial_jade",
+            "obsidian_shard",
+            "retro",
+            "speed_demon",
+            "standard_issue",
+            "toy",
+        },
+        ["tommy_gun"] = {
+            "base",
+            "doll_maker",
+            "feudal",
+            "jazz_breaker",
+            "steampunk",
+            "retro",
+            "toy",
+        },
+    },
+    ["sniper_rifle"] = {
+        ["bolt_action_sniper"] = {
+            "base",
+            "toy",
+            "metro",
+            "retro",
+            "medallion",
+            "game_hunting",
+            "anubis",
+            "solar_eclipse",
+            "toxin_shot",
+            "great_bolt",
+            "spec_ops",
+            "blood_oath",
+            "crown",
+            "horangi",
+        },
+    },
+    ["shotgun"] = {
+        ["shorty"] = {
+            "base",
+            "retro",
+            "construction_hazard",
+            "toy",
+            "tetanus_shot",
+            "power",
+            "gravewood_bloom",
+            "synthwave_surfer",
+            "double_justice",
+            "void_gloom",
+        },
+        ["shotgun"] = {
+            "base",
+            "retro",
+            "toy",
+            "war_shell",
+            "dragon_breath",
+            "outlaw_lullaby",
+            "metro",
+            "winter_wolf",
+            "spas12",
+        },
+    },
+    ["pistol"] = {
+        ["handgun"] = {
+            "base",
+            "toy",
+            "retro",
+            "metro",
+            "white_edge",
+            "K5",
+            "spec_ops",
+            "nailgun",
+            "harlequin_hex",
+            "diy",
+            "zapper",
+            "soft_shot",
+            "valorae",
+        },
+        ["deagle"] = {
+            "base",
+            "toy",
+            "speed_demon",
+            "retro",
+            "long_shot",
+            "phantom_wraith",
+            "abyss",
+            "crimson_monarch",
+        },
+        ["tec9"] = {
+            "base",
+            "retro",
+            "shipwreck",
+            "toy",
+            "solar_embrace",
+            "wild_card",
+            "clockwork_anomaly",
+            "abyssal_harbinger",
+            "bamboo",
+        },
+        ["flintlock"] = {
+            "base",
+            "retro",
+            "toy",
+            "shipwreck",
+            "single_justice",
+            "coconut",
+            "valkyrae",
+            "hand_cannon",
+        },
+    },
+    ["launcher"] = {
+        ["rpg"] = {
+            "base",
+            "classic",
+            "firework",
+            "retro",
+            "toxin_reactor",
+            "toy",
+            "rumble_spear",
+            "disco",
+        },
+    },
+    ["heavy"] = {
+        ["minigun"] = {
+            "base",
+            "arcade_annihilator",
+            "great_jaw",
+            "cursed_dutchman",
+            "hazard",
+            "retro",
+            "shipwreck",
+            "toy",
+        },
+    },
+    ["grenades"] = {
+        ["grenade"] = {
+            "base",
+            "frozen_grenade",
+            "molotov",
+            "smoke_grenade",
+        },
+    },
+    ["utility"] = {
+        ["jump_pad"] = {
+            "base",
+        },
+        ["satchel"] = {
+            "base",
+        },
+        ["taser"] = {
+            "base",
+            "cryocore",
+            "recon",
+            "toxic_reactor",
+            "exo_skeleton",
+            "toy",
+            "retro",
+            "construction_hazard",
+        },
+        ["medkit"] = {
+            "base",
+            "med_spray",
+            "toy",
+            "sailors_friend",
+            "field_medic",
+            "apprentice_spray",
+            "frying_pan",
+            "elven",
+            "sandwich",
+        },
+    },
+    ["melee"] = {
+        ["fist"] = {
+            "base",
+        },
+        ["karambit"] = {
+            "base",
+            "hazardous",
+            "makeshift",
+            "pixel",
+            "plasma_blade",
+            "spec_ops",
+            "marine",
+            "kitty_claw",
+            "swift_sakura",
+            "blood_oath",
+            "phantom_wail",
+        },
+        ["butterfly_knife"] = {
+            "base",
+            "anubis",
+            "comb",
+            "icer",
+            "mall_ninja",
+        },
+        ["katana"] = {
+            "base",
+            "chordtana",
+            "chronos_katana",
+            "classic_sword",
+            "balloon",
+            "cherry",
+            "dual_blade",
+            "fly_swatter",
+            "socio_bat",
+            "soul_seeker",
+            "toy",
+            "utility_katana",
+            "wood",
+        },
+        ["scythe"] = {
+            "base",
+            "bloodshot",
+            "bone_scythe",
+            "botanic",
+            "folklore",
+            "heart_seeker",
+            "icicle",
+            "lunar",
+            "construction_hazard",
+            "aureus",
+        },
+    },
+}
+local n = {
+}
+local function cg(gb, yo, vs, ng)
+    local wk = gb .. "." .. yo
+    local hp = n[wk] or "base"
+    if hp == vs then
+        return 
+    end
+    n[wk] = vs
+    if not ng and Options and Options.SavedSkinsData then
+        pcall(function()
+            Options.SavedSkinsData:SetValue(ay:JSONEncode(n))
+        end)
+    end
+    task.spawn(function()
+        local ek = bs:WaitForChild("Assets", 10)
+        if not ek then
+            return 
+        end
+        local oe = ek:WaitForChild("Items", 10)
+        if not oe then
+            return 
+        end
+        local ga = oe:WaitForChild(gb, 10)
+        if not ga then
+            return 
+        end
+        local yq = ga:WaitForChild(yo, 10)
+        if not yq then
+            return 
+        end
+        local eq = yq:WaitForChild("base", 10)
+        if not eq then
+            return 
+        end
+        if hp ~= "base" then
+            local hs = yq:FindFirstChild(hp)
+            if hs and eq then
+                local dm = eq:FindFirstChild("model")
+                local dl = eq:FindFirstChild("animations")
+                local tm = hs:FindFirstChild("model")
+                local tl = hs:FindFirstChild("animations")
+                if dm then
+                    dm.Parent = hs
+                end
+                if dl then
+                    dl.Parent = hs
+                end
+                if tm then
+                    tm.Parent = eq
+                end
+                if tl then
+                    tl.Parent = eq
+                end
+            end
+        end
+        if vs ~= "base" then
+            local vo = yq:WaitForChild(vs, 10)
+            if vo and eq then
+                local wt = vo:FindFirstChild("model")
+                local ws = vo:FindFirstChild("animations")
+                local er = eq:FindFirstChild("model")
+                local eo = eq:FindFirstChild("animations")
+                if wt then
+                    wt.Parent = eq
+                end
+                if ws then
+                    ws.Parent = eq
+                end
+                if er then
+                    er.Parent = vo
+                end
+                if eo then
+                    eo.Parent = vo
+                end
+            end
+        end
+    end)
+end
+local function ba()
+    local jo = type(identifyexecutor) == "function" and string.lower(identifyexecutor()) or ""
+    return string.sub(jo, 1, 2) == "xe" or string.sub(jo, 1, 2) == "so"
+end
+local cm = nil
+local cn = false
+local function ce()
+    cn = false
+    local ji = (type(getgenv) == "function" and getgenv()) or _G
+    if ji.OverKillunlockall and ji.OverKillunlockall.loopToken then
+        ji.OverKillunlockall.loopToken = {
+        }
+    end
+end
+local function bv()
+    if ba() then
+        return nil
+    end
+    local rh = require
+    local function require(wr)
+        if ba() then
+            return nil
+        end
+        return rh(wr)
+    end
+    if cm then
+        if not cn then
+            cn = true
+            pcall(function()
+                if cm.Refresh then
+                    cm.Refresh()
+                end
+            end)
+        end
+        return cm
+    end
+    cn = true
+    local bo = game:GetService("Players")
+    local bs = game:GetService("ReplicatedStorage")
+    local br = game:GetService("ReplicatedFirst")
+    local pk = bo.LocalPlayer
+    local pw = bs:WaitForChild("Milk")
+    local af = require(pw:WaitForChild("Directory"))
+    local ae = require(bs.Modules.Handlers.DataHandler)
+    local az = require(bs.Modules.Handlers.InventoryHandler)
+    local ji = (type(getgenv) == "function" and getgenv()) or _G
+    ji.OverKillunlockall = type(ji.OverKillunlockall) == "table" and ji.OverKillunlockall or {
+    }
+    local ve = ji.OverKillunlockall
+    ve.equipped = type(ve.equipped) == "table" and ve.equipped or {
+    }
+    ve.realOwned = type(ve.realOwned) == "table" and ve.realOwned or {
+    }
+    ve.loopToken = {
+    }
+    ve.token = ve.loopToken
+    ve.realOwnedReady = false
+    ve.signalPatched = {
+    }
+    local jj = ve.equipped
+    local tn = ve.realOwned
+    local xd = ve.loopToken
+    local gz = "OverKillunlockall"
+    local gy = gz .. "/config.json"
+    local yb = {
+        skin = true,
+        charm = true,
+        wrap = true,
+        finisher = true,
+        killEffect = true,
+    }
+    local yn = 0
+    local oa = {
+    }
+    local gu
+    local gp
+    local hx
+    local xr
+    local xs = 1
+    local ig = {
+    }
+    local ii = {
+    }
+    local ih = {
+    }
+    local ik = {
+    }
+    local ib = {
+    }
+    local io = {
+    }
+    local ie = {
+    }
+    local fm = {
+    }
+    local fq = {
+    }
+    local fo = {
+    }
+    local fp = {
+    }
+    local ia = nil
+    local im = nil
+    local ic = nil
+    local ij = nil
+    local fs = {
+    }
+    local fj = nil
+    local fk = nil
+    local jw = {
+        "",
+        "",
+        "",
+        "",
+    }
+    local oo = 0
+    local fl = false
+    local oq = 0
+    local fr = false
+    for nz, ny in pairs(af.Items.all) do
+        if ny and ny.nID ~= nil then
+            oa[ny.nID] = nz
+        end
+        if type(nz) == "string" and type(ny) == "table" and ny.slot then
+            yn = yn + 1
+        end
+    end
+    local function nl(sv)
+        return sv == nil or sv == pk
+    end
+    local rj = {
+        original = true,
+    }
+    local xu = {
+        original = true,
+        add = true,
+        update = true,
+        prefetch = true,
+        write = true,
+        serialize = true,
+        get = true,
+        bySlot = true,
+        set = true,
+        play = true,
+    }
+    local function xt(km, dv)
+        if type(km) ~= "function" or type(debug) ~= "table" or type(debug.getupvalue) ~= "function" then
+            return km
+        end
+        dv = dv or rj
+        for _ = 1, 12 do
+            local original
+            for mv = 1, 40 do
+                local qu, ql, yc = pcall(debug.getupvalue, km, mv)
+                if not qu or ql == nil then
+                    break
+                end
+                if dv[ql] and type(yc) == "function" then
+                    original = yc
+                    break
+                end
+            end
+            if not original then
+                return km
+            end
+            km = original
+        end
+        return km
+    end
+    local function ob(qk)
+        return oa[qk]
+    end
+    local function to(tr)
+        if type(tr) ~= "table" then
+            return true
+        end
+        if type(tr.createdAt) == "number" and tr.createdAt > 0 then
+            return true
+        end
+        if tr.createdAt ~= nil and tr.createdAt ~= 0 then
+            return true
+        end
+        return type(tr.xp) == "number" and tr.xp > 0
+    end
+    local function kk(iu, oi)
+        for mq, mw in pairs(iu) do
+            if type(mq) == "string" and not (type(mw) == "table" and mw.disabled) then
+                if not oi or mw.kind == oi then
+                    return mq
+                end
+            end
+        end
+    end
+    local function mx()
+        ig = {
+        }
+        for mq in pairs(af.Charms) do
+            ig[mq] = {
+                serial = 0,
+            }
+            if not ia then
+                ia = mq
+            end
+        end
+        ii = {
+        }
+        for mq in pairs(af.Wraps) do
+            ii[mq] = {
+                serial = 0,
+            }
+            if not im then
+                im = mq
+            end
+        end
+        ih = {
+        }
+        for mq, mw in pairs(af.Finishers) do
+            ih[mq] = {
+                serial = 0,
+            }
+            if not ic and (not mw.kind or mw.kind == "finisher") then
+                ic = mq
+            end
+            if not ij and mw.kind == "killEffect" then
+                ij = mq
+            end
+        end
+        fm = table.clone(ig)
+        fq = table.clone(ii)
+        fo = table.clone(ih)
+        for nz, ny in pairs(af.Items.all) do
+            local qk = ny.nID
+            local vu = {
+            }
+            local ro = {
+            }
+            if ny.skins then
+                for vq in pairs(ny.skins) do
+                    vu[vq] = true
+                    ro[vq] = true
+                end
+            end
+            ik[qk] = vu
+            fp[nz] = ro
+            ib[qk] = ig
+            io[qk] = ii
+            ie[qk] = ih
+        end
+    end
+    mx()
+    local function xv()
+        xs = xs + 1
+        table.clear(fs)
+        fj = nil
+        fk = nil
+        for nz, jy in pairs(jj) do
+            if type(jy) == "table" then
+                if jy.skin and jy.skin ~= false then
+                    fs[nz] = jy.skin
+                end
+                if not fj and jy.finisher then
+                    local mw = af.Finishers[jy.finisher]
+                    if mw and mw.kind == "finisher" then
+                        fj = jy.finisher
+                    end
+                end
+                if not fk and jy.killEffect then
+                    local mw = af.Finishers[jy.killEffect]
+                    if mw and mw.kind == "killEffect" then
+                        fk = jy.killEffect
+                    end
+                end
+            end
+        end
+    end
+    local function fz(hu)
+        if ve.realOwnedReady or type(hu) ~= "table" or type(hu.Items) ~= "table" then
+            return 
+        end
+        local jg = {
+        }
+        local th = 0
+        for qk, tr in pairs(hu.Items) do
+            local nz = ob(qk)
+            if nz and tr ~= nil then
+                th = th + 1
+                jg[#jg + 1] = {
+                    nz,
+                    tr,
+                }
+            end
+        end
+        if th == 0 then
+            return 
+        end
+        table.clear(tn)
+        local pj = yn > 0 and th >= yn * 0.8
+        for _, jh in ipairs(jg) do
+            if not pj or to(jh[2]) then
+                tn[jh[1]] = true
+            end
+        end
+        ve.realOwnedReady = true
+        for vw = 1, 4 do
+            jw[vw] = ""
+            for nz in pairs(tn) do
+                local ny = af.Items.all[nz]
+                if ny and ny.slot == vw then
+                    jw[vw] = nz
+                    break
+                end
+            end
+        end
+        xv()
+    end
+    local function rp(nz)
+        if type(nz) ~= "string" or not af.Items.all[nz] then
+            return false
+        end
+        return not ve.realOwnedReady or tn[nz] == true
+    end
+    local function ll()
+        local lm = pk:FindFirstChild("PlayerGui")
+        local kt = lm and lm:FindFirstChild("Gameplay")
+        return kt and kt:FindFirstChild("WeaponSelection")
+    end
+    local function nr()
+        local uy = ll()
+        local mw = uy and uy:FindFirstChild("Info")
+        local po = mw and mw:FindFirstChild("Map")
+        if po then
+            local qu, xa = pcall(function()
+                return po.Text
+            end)
+            if qu and type(xa) == "string" and xa:find("Shooting Range", 1, true) ~= nil then
+                return true
+            end
+        end
+        return false
+    end
+    local function nq()
+        local qr = os.clock()
+        if qr - oq < 0.05 then
+            return fr
+        end
+        oq = qr
+        fr = nr()
+        return fr
+    end
+    local function mu()
+        if nq() then
+            return false
+        end
+        local uy = ll()
+        if uy then
+            local rd, yg = pcall(function()
+                return uy.Visible
+            end)
+            if rd and yg == true then
+                return true
+            end
+        end
+        if type(debug) == "table" and type(debug.traceback) == "function" then
+            local xj = debug.traceback("", 2)
+            if type(xj) == "string" and xj:find("WeaponSelection", 1, true) then
+                return true
+            end
+        end
+        return false
+    end
+    local function mt()
+        local qr = os.clock()
+        if qr - oo < 0.03 then
+            return fl
+        end
+        oo = qr
+        fl = mu()
+        return fl
+    end
+    local function qq(nz, jx, yc)
+        local ny = type(nz) == "string" and af.Items.all[nz]
+        if not ny or not yb[jx] then
+            return nil, false
+        end
+        if yc == nil or yc == false or yc == "" or yc == "none" then
+            return false, true
+        end
+        if type(yc) ~= "string" then
+            return nil, false
+        end
+        if jx == "skin" then
+            if yc == "base" or yc == "random" then
+                return false, true
+            end
+            return ny.skins and ny.skins[yc] and yc or nil, ny.skins and ny.skins[yc] ~= nil
+        end
+        if yc == "random" then
+            return yc, true
+        end
+        if jx == "charm" then
+            return af.Charms[yc] and yc or nil, af.Charms[yc] ~= nil
+        end
+        if jx == "wrap" then
+            return af.Wraps[yc] and yc or nil, af.Wraps[yc] ~= nil
+        end
+        local kh = af.Finishers[yc]
+        if jx == "finisher" then
+            return kh and kh.kind == "finisher" and yc or nil, kh and kh.kind == "finisher"
+        end
+        if jx == "killEffect" then
+            return kh and kh.kind == "killEffect" and yc or nil, kh and kh.kind == "killEffect"
+        end
+    end
+    local function vb(nz, jx, yc)
+        local wh, qu = qq(nz, jx, yc)
+        if not qu then
+            return nil, false
+        end
+        jj[nz] = type(jj[nz]) == "table" and jj[nz] or {
+        }
+        jj[nz][jx] = wh
+        xv()
+        return wh, true
+    end
+    local function uo()
+        if not writefile or not makefolder then
+            return 
+        end
+        pcall(function()
+            if not isfolder or not isfolder(gz) then
+                pcall(makefolder, gz)
+            end
+            local rk = {
+                equipped = {
+                },
+            }
+            for nz, jy in pairs(jj) do
+                if af.Items.all[nz] and type(jy) == "table" then
+                    local hg = {
+                    }
+                    for jx, yc in pairs(jy) do
+                        if yb[jx] then
+                            hg[jx] = yc
+                        end
+                    end
+                    if next(hg) then
+                        rk.equipped[nz] = hg
+                    end
+                end
+            end
+            writefile(gy, ay:JSONEncode(rk))
+        end)
+    end
+    local function pc()
+        if not readfile or not isfile or not isfile(gy) then
+            return 
+        end
+        pcall(function()
+            local gg = ay:JSONDecode(readfile(gy))
+            if type(gg) ~= "table" or type(gg.equipped) ~= "table" then
+                return 
+            end
+            table.clear(jj)
+            for nz, jy in pairs(gg.equipped) do
+                if type(jy) == "table" then
+                    for jx, yc in pairs(jy) do
+                        local wh, qu = qq(nz, jx, yc)
+                        if qu then
+                            jj[nz] = type(jj[nz]) == "table" and jj[nz] or {
+                            }
+                            jj[nz][jx] = wh
+                        end
+                    end
+                end
+            end
+            xv()
+        end)
+    end
+    local function hl(tr)
+        tr = type(tr) == "table" and tr or {
+        }
+        tr.serial = tr.serial or 0
+        return tr
+    end
+    local function jz(wr, iu)
+        wr = type(wr) == "table" and wr or {
+        }
+        for mq in pairs(iu) do
+            wr[mq] = hl(wr[mq])
+        end
+        return wr
+    end
+    local function kb(wr, il)
+        if not wr or next(wr) == nil then
+            local wp = table.clone(il)
+            wp._filled = il
+            return wp
+        end
+        if wr._filled == il then
+            return wr
+        end
+        for mq, tq in pairs(il) do
+            if wr[mq] == nil then
+                wr[mq] = tq
+            elseif type(wr[mq]) == "table" and wr[mq].serial == nil then
+                wr[mq].serial = 0
+            end
+        end
+        wr._filled = il
+        return wr
+    end
+    local function hw(yc)
+        return yc == false and nil or yc
+    end
+    local function oc(nz, tr)
+        local ny = af.Items.all[nz]
+        tr = type(tr) == "table" and tr or {
+        }
+        tr.createdAt = tr.createdAt or 0
+        tr.xp = type(tr.xp) == "number" and tr.xp or 0
+        local jy = jj[nz]
+        if type(jy) == "table" then
+            for jx, yc in pairs(jy) do
+                if yb[jx] then
+                    tr[jx] = hw(yc)
+                end
+            end
+        end
+        if not ny.skins or not ny.skins[tr.skin] then
+            tr.skin = nil
+        end
+        tr.activeCharm = tr.charm == "random" and (af.Charms[tr.activeCharm] and tr.activeCharm or (ia or kk(af.Charms))) or nil
+        tr.activeWrap = tr.wrap == "random" and (af.Wraps[tr.activeWrap] and tr.activeWrap or (im or kk(af.Wraps))) or nil
+        local vn = ny.skins and ny.skins[tr.skin or "base"]
+        tr.stats = (vn and vn.stats) or ny.stats or tr.stats
+        return tr
+    end
+    xr = function(hu)
+        if type(hu) ~= "table" then
+            return hu
+        end
+        if hu._unlockedVersion == xs then
+            return hu
+        end
+        hu.Items = type(hu.Items) == "table" and hu.Items or {
+        }
+        hu.Skins = type(hu.Skins) == "table" and hu.Skins or {
+        }
+        hu.Charms = type(hu.Charms) == "table" and hu.Charms or {
+        }
+        hu.Wraps = type(hu.Wraps) == "table" and hu.Wraps or {
+        }
+        hu.Finishers = type(hu.Finishers) == "table" and hu.Finishers or {
+        }
+        hu.GlobalCharms = kb(hu.GlobalCharms, ig)
+        hu.GlobalWraps = kb(hu.GlobalWraps, ii)
+        hu.GlobalFinishers = kb(hu.GlobalFinishers, ih)
+        for nz, ny in pairs(af.Items.all) do
+            local qk = ny.nID
+            hu.Items[qk] = oc(nz, hu.Items[qk])
+            local hz = ik[qk]
+            if hz then
+                local hn = hu.Skins[qk]
+                if not hn or next(hn) == nil then
+                    local wp = table.clone(hz)
+                    hu.Skins[qk] = wp
+                elseif hn ~= hz then
+                    for vq in pairs(hz) do
+                        hn[vq] = true
+                    end
+                end
+            end
+            hu.Charms[qk] = kb(hu.Charms[qk], ig)
+            hu.Wraps[qk] = kb(hu.Wraps[qk], ii)
+            hu.Finishers[qk] = kb(hu.Finishers[qk], ih)
+        end
+        hu._unlockedVersion = xs
+        return hu
+    end
+    local function ym(sv)
+        local wr = sv or pk
+        local hu = ae.Data and ae.Data[wr]
+        while task.wait() and not (hu and next(hu)) do
+            if wr and not wr.Parent then
+                return nil
+            end
+            hu = ae.Data and ae.Data[wr]
+        end
+        return hu
+    end
+    ae.GetDataAsync = function(_, sv)
+        local hu = ym(sv)
+        if nl(sv) then
+            fz(hu)
+            xr(hu)
+        end
+        return hu
+    end
+    fz(ae.Data and ae.Data[pk])
+    local function kz()
+        return ae:GetDataAsync(pk)
+    end
+    local function kj(qk, jx, yc)
+        local vg = ae.Signals and ae.Signals[pk]
+        if not vg then
+            return 
+        end
+        local is = {
+            [qk] = {
+                [jx] = yc,
+            },
+        }
+        if vg.Updated then
+            pcall(vg.Updated.Fire, vg.Updated, ae.Data[pk], {
+                Items = is,
+            })
+        end
+        if vg.Items then
+            pcall(vg.Items.Fire, vg.Items, ae.Data[pk] and ae.Data[pk].Items, is, {
+                Items = is,
+            })
+        end
+    end
+    local hv = {
+        "Items",
+        "Skins",
+        "Charms",
+        "Wraps",
+        "Finishers",
+        "GlobalCharms",
+        "GlobalWraps",
+        "GlobalFinishers",
+        "Updated",
+    }
+    local function sf()
+        local vg = ae.Signals and ae.Signals[pk]
+        if type(vg) ~= "table" then
+            return 
+        end
+        for _, ql in ipairs(hv) do
+            local vf = vg[ql]
+            if type(vf) == "table" and type(vf.GetConnections) == "function" then
+                local qu, hc = pcall(vf.GetConnections, vf)
+                if qu and type(hc) == "table" then
+                    for _, hb in pairs(hc) do
+                        if type(hb) == "table" and type(hb._fn) == "function" and not ve.signalPatched[hb] then
+                            local original = xt(hb._fn)
+                            hb._fn = function(...)
+                                local ht = ae.Data and ae.Data[pk]
+                                if ht and ht._unlockedVersion ~= xs then
+                                    pcall(xr, ht)
+                                end
+                                return original(...)
+                            end
+                            ve.signalPatched[hb] = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local function pi()
+        if not gu or type(gu) ~= "table" then
+            local ru = br:FindFirstChild("Packages")
+            local gt = ru and ru:FindFirstChild("Chickynoid")
+            gt = gt and gt:FindFirstChild("Client")
+            gt = gt and gt:FindFirstChild("ClientModule")
+            if gt then
+                local qu, qh = pcall(require, gt)
+                if qu and type(qh) == "table" then
+                    gu = qh
+                end
+            end
+        end
+        local gn = gu and gu.localChickynoid
+        if not gn then
+            return nil
+        end
+        local vh = gn.simulation
+        return vh and vh.state
+    end
+    local function no(wd)
+        if type(wd) ~= "table" then
+            return false
+        end
+        local ho = pi()
+        return ho ~= nil and wd == ho
+    end
+    local function lj(nz, ju)
+        local fi = fs[nz]
+        if fi then
+            return fi
+        end
+        local ny = type(nz) == "string" and af.Items.all[nz]
+        if type(ju) == "string" and ny and ny.skins and ny.skins[ju] then
+            return ju
+        end
+        return "base"
+    end
+    local function tu()
+        task.defer(function()
+            local qz, qm = pcall(require, br:WaitForChild("neuron"))
+            local gk = qz and qm:get_character(pk)
+            if not gk then
+                return 
+            end
+            local rc, cw = pcall(function()
+                return require(bs.Modules.WeaponECS.Render.ViewModel)
+            end)
+            if rc and cw.invalidateBuilds then
+                pcall(cw.invalidateBuilds, gk)
+                local hf = cw.getControllers and cw.getControllers(gk, true)
+                for _, he in pairs(type(hf) == "table" and hf or {
+                }) do
+                    if he and he.destroy then
+                        pcall(he.destroy, he)
+                    end
+                end
+            end
+        end)
+    end
+    local function va(nz, jx, yc)
+        local ny = af.Items.all[nz]
+        if not ny then
+            return 
+        end
+        local wh, qu = vb(nz, jx, yc)
+        if not qu then
+            return 
+        end
+        local hu = kz()
+        if type(hu) == "table" then
+            local qk = ny.nID
+            hu.Items[qk] = oc(nz, hu.Items[qk])
+            kj(qk, jx, hw(wh))
+        end
+        uo()
+        tu()
+    end
+    az.OwnsItem = function(_, nz)
+        if mt() then
+            return rp(nz)
+        end
+        return type(nz) == "string" and af.Items.all[nz] ~= nil
+    end
+    az.OwnsSkin = function(_, nz, vq)
+        if type(nz) ~= "string" or type(vq) ~= "string" then
+            return false
+        end
+        local fi = fp[nz]
+        if fi then
+            return fi[vq] ~= nil
+        end
+        local ny = af.Items.all[nz]
+        return ny and ny.skins and ny.skins[vq] ~= nil
+    end
+    az.OwnsCharm = function(_, _, gl)
+        return type(gl) == "string" and af.Charms[gl] ~= nil
+    end
+    az.OwnsWrap = function(_, _, yw)
+        return type(yw) == "string" and af.Wraps[yw] ~= nil
+    end
+    az.OwnsFinisher = function(_, _, ki)
+        return type(ki) == "string" and af.Finishers[ki] ~= nil
+    end
+    az.GetOwnedSkins = function(_, nz)
+        if type(nz) == "string" then
+            local fi = fp[nz]
+            if fi then
+                return table.clone(fi)
+            end
+        end
+        return {
+        }
+    end
+    az.GetOwnedCharms = function()
+        return table.clone(fm)
+    end
+    az.GetOwnedWraps = function()
+        return table.clone(fq)
+    end
+    az.GetOwnedFinishers = function()
+        return table.clone(fo)
+    end
+    az.GetCharmSerial = function()
+        return 0
+    end
+    az.GetWrapSerial = function()
+        return 0
+    end
+    az.GetFinisherSerial = function()
+        return 0
+    end
+    local function se()
+        local td = pk:FindFirstChild("PlayerScripts") or pk:WaitForChild("PlayerScripts", 10)
+        local uv = td and td:FindFirstChild("Loader")
+        uv = uv and uv:FindFirstChild("Lobby")
+        uv = uv and uv:FindFirstChild("Armory")
+        local od = uv and uv:FindFirstChild("Item")
+        local qu, bb = false, nil
+        if od then
+            qu, bb = pcall(require, od)
+        end
+        if not qu or type(bb) ~= "table" or type(bb.Select) ~= "function" then
+            return 
+        end
+        local original = xt(bb.Select)
+        bb.Select = function(uz, nz, vq, ...)
+            local ue = original(uz, nz, vq, ...)
+            local ny = type(nz) == "string" and af.Items.all[nz]
+            if type(vq) == "string" and ny and ny.skins and ny.skins[vq] then
+                va(nz, "skin", vq)
+            end
+            return ue
+        end
+    end
+    local function jv(vw)
+        local lq = jw[vw]
+        if lq and lq ~= "" then
+            return lq
+        end
+        for nz in pairs(tn) do
+            local ny = af.Items.all[nz]
+            if ny and ny.slot == vw then
+                jw[vw] = nz
+                return nz
+            end
+        end
+        return nil
+    end
+    local function un(lr)
+        if type(lr) ~= "table" or nq() then
+            return lr
+        end
+        for vw = 1, 4 do
+            local nz = lr[vw]
+            if type(nz) == "string" and nz ~= "" and not rp(nz) then
+                lr[vw] = jv(vw) or ""
+            end
+        end
+        return lr
+    end
+    local function sh(sr)
+        if type(sr) == "table" and type(sr.stateData) == "table" and sr.stateData[1] == "Dead" then
+            sr.stateData[2] = hx(sr.stateData[2])
+        end
+        return sr
+    end
+    local function sl(rv, oh, so)
+        if type(rv) ~= "table" or type(so) ~= "function" then
+            return 
+        end
+        if type(rv.GetConnections) == "function" then
+            local qu, hc = pcall(rv.GetConnections, rv)
+            if qu and type(hc) == "table" then
+                for _, hb in pairs(hc) do
+                    if type(hb) == "table" and type(hb._fn) == "function" and not ve.signalPatched[hb] then
+                        local original = xt(hb._fn)
+                        local yx = function(sr, ...)
+                            return original(so(sr), ...)
+                        end
+                        if pcall(function()
+                            hb._fn = yx
+                        end) then
+                            ve.signalPatched[hb] = true
+                        end
+                    end
+                end
+            end
+        end
+        local ha = oh .. "_connect"
+        if type(rv.Connect) == "function" and not ve.signalPatched[ha] then
+            local original = xt(rv.Connect)
+            local sn = function(uz, fu, ...)
+                if type(fu) == "function" then
+                    local yx = function(sr, ...)
+                        return fu(so(sr), ...)
+                    end
+                    return original(uz, yx, ...)
+                end
+                return original(uz, fu, ...)
+            end
+            if pcall(function()
+                rv.Connect = sn
+            end) then
+                ve.signalPatched[ha] = true
+            end
+        end
+    end
+    local function sj(rv, jx)
+        if type(rv) ~= "table" or type(rv.Fire) ~= "function" then
+            return 
+        end
+        local original = xt(rv.Fire)
+        rv.Fire = function(uz, nz, yc, ...)
+            va(nz, jx, yc)
+            return original(uz, nz, yc, ...)
+        end
+    end
+    local function sk()
+        local qu, qm = pcall(function()
+            return require(br:WaitForChild("neuron"))
+        end)
+        local rx = qu and qm.net and qm.net.packets
+        if not rx then
+            return 
+        end
+        sj(rx.armory_change_skin, "skin")
+        sj(rx.armory_change_charm, "charm")
+        sj(rx.armory_change_wrap, "wrap")
+        sj(rx.armory_change_finisher, "finisher")
+        sj(rx.armory_change_killeffect, "killEffect")
+        if type(rx.select_guns) == "table" and type(rx.select_guns.Fire) == "function" then
+            local original = xt(rx.select_guns.Fire)
+            rx.select_guns.Fire = function(uz, lr, ...)
+                if nq() then
+                    local tk = ve.realOwnedReady
+                    ve.realOwnedReady = false
+                    local ue = {
+                        pcall(original, uz, lr, ...),
+                    }
+                    ve.realOwnedReady = tk
+                    if not ue[1] then
+                        error(ue[2])
+                    end
+                    return table.unpack(ue, 2)
+                end
+                return original(uz, un(lr), ...)
+            end
+        end
+        for _, rw in ipairs({
+            "state_changed",
+            "dummy_state_changed",
+        }) do
+            local rv = rx[rw]
+            sl(rv, rw, sh)
+            if type(rv) == "table" and type(rv.Connection) == "function" then
+                local original = xt(rv.Connection)
+                rv.Connection = function(sr, ...)
+                    return original(sh(sr), ...)
+                end
+            end
+        end
+        if type(rx.finisher_dummy_kill) == "table" and type(rx.finisher_dummy_kill.Connection) == "function" then
+            local original = xt(rx.finisher_dummy_kill.Connection)
+            rx.finisher_dummy_kill.Connection = function(sr, ...)
+                if type(sr) == "table" then
+                    sr.finisherID = gp("finisher", nil) or sr.finisherID
+                end
+                return original(sr, ...)
+            end
+        end
+    end
+    gp = function(oi, yo)
+        local jx = oi == "killEffect" and "killEffect" or "finisher"
+        local function tz(xz)
+            if not xz then
+                return nil
+            end
+            if xz == "random" then
+                return oi == "killEffect" and (ij or kk(af.Finishers, oi)) or (ic or kk(af.Finishers, oi))
+            end
+            local mw = type(xz) == "string" and af.Finishers[xz]
+            return mw and mw.kind == oi and xz or nil
+        end
+        if type(yo) == "string" then
+            local jy = jj[yo]
+            if type(jy) == "table" then
+                local ty = tz(jy[jx])
+                if ty then
+                    return ty
+                end
+            end
+        end
+        local wd = pi()
+        if wd then
+            local vw = wd.equippedSlot
+            if vw then
+                local ho = wd["slot" .. vw .. "_weaponID"]
+                if type(ho) == "string" then
+                    local jy = jj[ho]
+                    if type(jy) == "table" then
+                        local ty = tz(jy[jx])
+                        if ty then
+                            return ty
+                        end
+                    end
+                end
+            end
+        end
+        if oi == "killEffect" and fk then
+            return fk
+        elseif oi == "finisher" and fj then
+            return fj
+        end
+        return tz("random")
+    end
+    local function nm(dn)
+        if dn == pk then
+            return true
+        end
+        if type(dn) == "string" then
+            return dn == pk.Name
+        end
+        if type(dn) == "number" then
+            return dn == pk.UserId
+        end
+        if typeof and typeof(dn) == "Instance" then
+            return dn == pk or dn.Name == pk.Name
+        end
+        return false
+    end
+    local function nn(yc)
+        if type(yc) ~= "table" then
+            return false
+        end
+        return nm(yc.lastActor or yc.killer or yc.actor)
+    end
+    hx = function(yc)
+        if type(yc) == "table" and (yc[1] == "PlayerKill" or yc[1] == "Other") then
+            yc = yc[2]
+        end
+        if type(yc) ~= "table" or not nn(yc) then
+            return yc
+        end
+        yc.finisherID = gp("finisher", yc.weaponID) or yc.finisherID
+        yc.killEffectID = gp("killEffect", yc.weaponID) or yc.killEffectID
+        return yc
+    end
+    local function xx(km)
+        local yd = {
+        }
+        if type(km) ~= "function" or type(debug) ~= "table" then
+            return yd
+        end
+        if type(debug.getupvalues) == "function" then
+            local qu, pa = pcall(debug.getupvalues, km)
+            if qu and type(pa) == "table" then
+                for _, yc in pairs(pa) do
+                    yd[#yd + 1] = yc
+                end
+            end
+        end
+        if type(debug.getupvalue) ~= "function" then
+            return yd
+        end
+        for mv = 1, 100 do
+            local qu, ql, yc = pcall(debug.getupvalue, km, mv)
+            if not qu or ql == nil then
+                break
+            end
+            if yc ~= nil then
+                yd[#yd + 1] = yc
+            elseif type(ql) ~= "string" then
+                yd[#yd + 1] = ql
+            end
+        end
+        return yd
+    end
+    local function kg(uf, uw, iq)
+        if type(uf) ~= "table" or iq > 4 then
+            return nil
+        end
+        uw = uw or {
+        }
+        if uw[uf] then
+            return nil
+        end
+        uw[uf] = true
+        local qp = rawget(uf, "NonOrdered")
+        if type(qp) == "table" then
+            for _, lv in pairs(qp) do
+                if type(lv) == "table" and lv.Name == "Dead" and type(lv.Func) == "function" then
+                    return lv
+                end
+            end
+        end
+        for _, yc in pairs(uf) do
+            local lv = kg(yc, uw, iq + 1)
+            if lv then
+                return lv
+            end
+        end
+        return nil
+    end
+    local function sg(r)
+        local lv = kg(r, {
+        }, 0)
+        if not lv and type(r.InitCharacter) == "function" then
+            for _, yc in ipairs(xx(r.InitCharacter)) do
+                lv = kg(yc, {
+                }, 0)
+                if lv then
+                    break
+                end
+            end
+        end
+        if not lv then
+            return 
+        end
+        local original = xt(lv.Func)
+        lv.Func = function(gk, mo, mw, we, ...)
+            return original(gk, mo, mw, hx(we), ...)
+        end
+    end
+    local function ua()
+        local qw, ai = pcall(function()
+            return require(bs.Modules.Handlers.Effects)
+        end)
+        if not qw or type(ai) ~= "table" or type(ai.Identify) ~= "function" then
+            return 
+        end
+        ai.Identify = xt(ai.Identify, xu)
+    end
+    local function ei(wd)
+        wd = wd or pi()
+        if type(wd) ~= "table" then
+            return wd
+        end
+        if wd._skinsVersion == xs and wd._lastW1 == wd.slot1_weaponID and wd._lastW2 == wd.slot2_weaponID and wd._lastW3 == wd.slot3_weaponID and wd._lastW4 == wd.slot4_weaponID then
+            return wd
+        end
+        for vw = 1, 4 do
+            local yp = "slot" .. vw .. "_weaponID"
+            local nz = wd[yp]
+            if type(nz) == "string" and nz ~= "" then
+                local vr = "slot" .. vw .. "_skin"
+                local wx = fs[nz] or wd[vr]
+                if not wx or wx == false then
+                    wx = "base"
+                end
+                if wd[vr] ~= wx then
+                    wd[vr] = wx
+                end
+            end
+        end
+        wd._skinsVersion = xs
+        wd._lastW1 = wd.slot1_weaponID
+        wd._lastW2 = wd.slot2_weaponID
+        wd._lastW3 = wd.slot3_weaponID
+        wd._lastW4 = wd.slot4_weaponID
+        return wd
+    end
+    local function ef(nc)
+        for _, jh in pairs(type(nc) == "table" and nc or {
+        }) do
+            if type(jh) == "table" and type(jh.id) == "string" then
+                jh.skin = lj(jh.id, jh.skin)
+            end
+        end
+        return nc
+    end
+    local function eh(pd)
+        if type(pd) == "table" and type(pd.slots) == "table" then
+            for _, vw in pairs(pd.slots) do
+                if type(vw) == "table" and type(vw.weaponID) == "string" then
+                    vw.skin = lj(vw.weaponID, vw.skin)
+                end
+            end
+        end
+        return pd
+    end
+    local function sm()
+        local qx, aa = pcall(function()
+            return require(bs.Modules.WeaponECS.Render.ClientInventory)
+        end)
+        if qx and type(aa) == "table" then
+            local add = xt(aa.addToInventory, xu)
+            local update = xt(aa.updateInventory, xu)
+            local prefetch = xt(aa.prefetchLoadoutAnimations, xu)
+            aa.addToInventory = function(sv, nz, vl, ...)
+                return add(sv, nz, sv == pk and lj(nz, vl) or vl, ...)
+            end
+            aa.updateInventory = function(sr)
+                if type(sr) == "table" and sr.player == pk then
+                    ef(sr.inventory)
+                end
+                return update(sr)
+            end
+            aa.prefetchLoadoutAnimations = function(nc)
+                return prefetch(nc)
+            end
+        end
+        local qy, bf = pcall(function()
+            return require(bs.Modules.WeaponECS.WeaponLoadoutSync)
+        end)
+        if qy and type(bf) == "table" then
+            local write = xt(bf.WriteLoadoutToState, xu)
+            local serialize = xt(bf.SerializeState, xu)
+            bf.WriteLoadoutToState = function(wd, pd)
+                if no(wd) then
+                    return write(ei(wd), eh(pd))
+                end
+                return write(wd, pd)
+            end
+            bf.SerializeState = function(wd)
+                if no(wd) then
+                    return eh(serialize(ei(wd)))
+                end
+                return serialize(wd)
+            end
+        end
+        local ra, bt = pcall(function()
+            return require(bs.Modules.WeaponECS.Resolve.ItemResolver)
+        end)
+        if ra and type(bt) == "table" then
+            local get = xt(bt.get, xu)
+            local bySlot = xt(bt.getBySlot, xu)
+            bt.get = function(nz, vl, ...)
+                return get(nz, vl, ...)
+            end
+            bt.getBySlot = function(wd, vw, ...)
+                if no(wd) then
+                    return bySlot(ei(wd), vw, ...)
+                end
+                return bySlot(wd, vw, ...)
+            end
+        end
+    end
+    local function si()
+        local rb, cc = pcall(function()
+            return require(bs.Modules.States)
+        end)
+        if rb and type(cc) == "table" then
+            local add = xt(cc.AddState, xu)
+            local set = xt(cc.SetOrAdd, xu)
+            cc.AddState = function(uz, gk, ql, yc, ...)
+                return add(uz, gk, ql, ql == "Dead" and hx(yc) or yc, ...)
+            end
+            cc.SetOrAdd = function(uz, gk, ql, yc, ...)
+                return set(uz, gk, ql, ql == "Dead" and hx(yc) or yc, ...)
+            end
+        end
+        local qv, r = pcall(function()
+            return require(bs.Milk.StateHandlerBridge)
+        end)
+        if qv and type(r) == "table" then
+            if type(r.PlayLocalFinisher) == "function" then
+                local play = xt(r.PlayLocalFinisher, xu)
+                r.PlayLocalFinisher = function(uz, gk, ki, ...)
+                    return play(uz, gk, gp("finisher", nil) or ki, ...)
+                end
+            end
+            sg(r)
+        end
+        ua()
+    end
+    local function uh()
+        pc()
+        xr(kz())
+        sf()
+        se()
+        sk()
+        sm()
+        si()
+        task.spawn(function()
+            while ve.loopToken == xd do
+                local hu = ae.Data and ae.Data[pk]
+                if hu and hu._unlockedVersion ~= xs then
+                    pcall(xr, hu)
+                end
+                pcall(sf)
+                local wd = pi()
+                if wd and wd._skinsVersion ~= xs then
+                    pcall(ei, wd)
+                end
+                task.wait(0.5)
+            end
+        end)
+    end
+    uh()
+    cm = {
+        Refresh = uh,
+        Save = uo,
+        SetEquipped = va,
+    }
+    return cm
+end
+local ab = {
+    AimbotEnabled = false,
+    AimbotSmoothing = 15,
+    AimbotSensitivityify = 1,
+    AimbotFOV = 120,
+    AimbotWallcheck = false,
+    AimbotMaxDistance = 300,
+    AimbotKey = Enum.UserInputType.MouseButton2,
+    AimbotBone = {
+        Head = true,
+    },
+    AimbotPrediction = false,
+    AimbotPredictScale = 0.08,
+    AimbotSticky = false,
+    ESPEnabled = false,
+    ESPBox = false,
+    ESPCornerBox = false,
+    ESPDistance = false,
+    ESPSkeleton = false,
+    ESPMaxDistance = 300,
+    ESPVisibleColor = Color3.new(0, 1, 0),
+    ESPInvisibleColor = Color3.new(1, 0, 0),
+    ESPDistanceColor = Color3.new(1, 1, 1),
+    ESPBoxThickness = 1,
+    ESPFilled = false,
+    ESPFillTransp = 0.7,
+    ESPSkeletonThickness = 1,
+    ESPAnimMode = 'Spinning Gradient',
+    ESPAnimSpeed = 1,
+    ESPGradientColor2 = Color3.fromRGB(0, 200, 255),
+    FOVEnabled = false,
+    FOVColor = Color3.new(1, 1, 1),
+    FOVColor2 = Color3.fromRGB(0, 200, 255),
+    FOVRadius = 120,
+    FOVFilled = false,
+    FOVTransparency = 0.85,
+    FOVThickness = 2,
+    FOVFillColor = Color3.fromRGB(0, 200, 255),
+    FOVFillColor2 = Color3.fromRGB(0, 90, 255),
+    FOVFillTransp = 0.85,
+    FOVSpinSpeed = 1,
+    TriggerbotEnabled = false,
+    TriggerbotScopeCheck = false,
+    TriggerbotBone = {
+        Head = true,
+    },
+    TriggerbotFOVEnabled = false,
+    TriggerbotFOVColor = Color3.new(1, 0, 0),
+    TriggerbotFOVColor2 = Color3.fromRGB(255, 120, 120),
+    TriggerbotFOVFilled = false,
+    TriggerbotFOVTransparency = 0.5,
+    TriggerbotFOVThickness = 2,
+    TriggerbotFOVFillColor = Color3.fromRGB(255, 0, 0),
+    TriggerbotFOVFillColor2 = Color3.fromRGB(120, 0, 0),
+    TriggerbotFOVFillTransp = 0.6,
+    TriggerbotFOVSpinSpeed = 1,
+    TriggerbotRadius = 25,
+    TriggerbotMinDelay = 50,
+    TriggerbotMaxDelay = 120,
+    TriggerbotClickHold = 30,
+    TriggerbotKey = Enum.KeyCode.T,
+    KatanaCheck = false,
+    TeamCheck = false,
+    AllowDummys = false,
+    ShowKeybinds = false,
+    ShowWatermark = true,
+    RaycastUpdateRate = 50,
+    WeaponChamsEnabled = false,
+    WeaponChamsColor = Color3.new(1, 1, 1),
+    WeaponChamsTransparency = 0,
+    WeaponChamsMaterial = 'ForceField',
+    HitTracersEnabled = false,
+    HitTracerColor = Color3.fromRGB(0, 255, 255),
+    HitTracerThickness = 0.08,
+    HitTracerLifetime = 0.75,
+    HitTracerFadeIn = 0.05,
+    HitTracerFadeOut = 0.35,
+    UtilityESPEnabled = false,
+    UtilityESPName = true,
+    UtilityESPGlow = true,
+    UtilityESPColor = Color3.fromRGB(0, 255, 120),
+    LightingChangerEnabled = false,
+    LightingBrightness = 2,
+    LightingClockTime = 14,
+    LightingExposure = 0,
+    LightingAmbient = Color3.fromRGB(128, 128, 128),
+    LightingOutdoorAmbient = Color3.fromRGB(128, 128, 128),
+    LightingColorShiftTop = Color3.new(0, 0, 0),
+    LightingColorShiftBottom = Color3.new(0, 0, 0),
+    HitSoundHead = 'Normal',
+    HitSoundBody = 'Normal',
+    HitSoundKill = 'Normal',
+    HitSoundHeadVolume = 1,
+    HitSoundBodyVolume = 1,
+    HitSoundKillVolume = 1,
+    Autoload = false,
+    Slientload = false,
+}
+local av = Instance.new("Folder")
+av.Name = "zone_HitTracers"
+av.Parent = workspace
+local aw = setmetatable({
+}, {
+    __mode = 'k',
+})
+local e = {
+}
+local au
+local function gr(sb)
+    e[sb] = nil
+    if sb and sb.Parent then
+        sb:Destroy()
+    end
+end
+local function ja(rr, rs)
+    if not ab.HitTracersEnabled then
+        return 
+    end
+    if typeof(rr) ~= 'Vector3' or typeof(rs) ~= 'Vector3' then
+        return 
+    end
+    local ip = rs - rr
+    local ou = ip.Magnitude
+    if ou <= 0.05 then
+        return 
+    end
+    local xc = math.clamp(ab.HitTracerThickness or 0.08, 0.01, 1)
+    local js = math.max(ab.HitTracerFadeIn or 0, 0)
+    local jt = math.max(ab.HitTracerFadeOut or 0, 0)
+    local ov = math.max(ab.HitTracerLifetime or 0.75, js + jt + 0.01)
+    local gx = ab.HitTracerColor or Color3.fromRGB(0, 255, 255)
+    local xk = Instance.new('Part')
+    xk.Name = 'NeonHitTracer'
+    xk.Anchored = true
+    xk.CanCollide = false
+    xk.CanTouch = false
+    xk.CanQuery = false
+    xk.CastShadow = false
+    xk.Material = Enum.Material.Neon
+    xk.Color = gx
+    xk.Transparency = 1
+    xk.Size = Vector3.new(xc, xc, ou)
+    xk.CFrame = CFrame.lookAt((rr + rs) * 0.5, rs)
+    xk.Parent = av
+    e[xk] = true
+    if js > 0 then
+        cl:Create(xk, TweenInfo.new(js, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Transparency = 0,
+        }):Play()
+    else
+        xk.Transparency = 0
+    end
+    task.delay(math.max(ov - jt, js), function()
+        if not xk or not xk.Parent then
+            return 
+        end
+        local xq = cl:Create(xk, TweenInfo.new(jt, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Transparency = 1,
+        })
+        xq:Play()
+        xq.Completed:Connect(function()
+            gr(xk)
+        end)
+        if jt <= 0 then
+            gr(xk)
+        end
+    end)
+end
+local function lc()
+    local gj = bg and bg.Character
+    local uf = gj and gj:FindFirstChild('HumanoidRootPart')
+    if uf then
+        return uf.Position
+    end
+    return u.CFrame.Position
+end
+local function nf(el)
+    if not el or not el:IsA('Attachment') then
+        return false
+    end
+    local ph = lc()
+    return (el.WorldPosition - ph).Magnitude <= 10
+end
+local function le(wc)
+    local qj = co:GetMouseLocation()
+    local ti = u:ViewportPointToRay(qj.X, qj.Y)
+    local pr = 10000
+    local rz = RaycastParams.new()
+    rz.FilterType = Enum.RaycastFilterType.Exclude
+    local kd = {
+        av,
+    }
+    pcall(function()
+        local pe = ld and ld() or bg.Character
+        if pe then
+            table.insert(kd, pe)
+        end
+    end)
+    rz.FilterDescendantsInstances = kd
+    local ue = workspace:Raycast(ti.Origin, ti.Direction * pr, rz)
+    if ue then
+        return ue.Position
+    end
+    return ti.Origin + (ti.Direction * pr)
+end
+local function iz(el)
+    if not ab.HitTracersEnabled then
+        return 
+    end
+    if not el or not el:IsA('Attachment') then
+        return 
+    end
+    if not nf(el) then
+        return 
+    end
+    local rr = el.WorldPosition
+    local mg = le(rr)
+    ja(rr, mg)
+end
+local function kv(xl)
+    local el, em
+    pcall(function()
+        el = xl.Attachment0
+        em = xl.Attachment1
+    end)
+    if not el then
+        el = xl:FindFirstChild('Attachment0')
+    end
+    if not em then
+        em = xl:FindFirstChild('Attachment1')
+    end
+    return el, em
+end
+local function xp(xl)
+    if not ab.HitTracersEnabled then
+        return 
+    end
+    if not xl or not xl.Parent or aw[xl] then
+        return 
+    end
+    local el = kv(xl)
+    if el and el:IsA('Attachment') and nf(el) then
+        aw[xl] = true
+        iz(el)
+    end
+end
+local function ur()
+    if not ab.HitTracersEnabled then
+        return 
+    end
+    for _, ir in ipairs(workspace:GetDescendants()) do
+        if ir.Name == 'BulletTrail' then
+            xp(ir)
+        end
+    end
+end
+au = workspace.DescendantAdded:Connect(function(ir)
+    if ir.Name == 'BulletTrail' then
+        task.defer(xp, ir)
+        task.delay(0.03, function()
+            xp(ir)
+        end)
+    elseif ir.Name == 'Attachment0' then
+        local sa = ir.Parent
+        if sa and sa.Name == 'BulletTrail' then
+            task.defer(xp, sa)
+        end
+    end
+end)
+local cs = Instance.new('Folder')
+cs.Name = 'zone_UtilityESP'
+pcall(function()
+    cs.Parent = ac
+end)
+if not cs.Parent then
+    cs.Parent = ac
+end
+local cu = {
+}
+local cq = {
+}
+local cr = nil
+local cp = nil
+local function lk(qs)
+    if not qs then
+        return nil
+    end
+    if qs:IsA('BasePart') then
+        return qs
+    end
+    if qs:IsA('Model') then
+        return qs.PrimaryPart or qs:FindFirstChildWhichIsA('BasePart', true)
+    end
+    return qs:FindFirstChildWhichIsA('BasePart', true)
+end
+local function tw(qs)
+    local hu = cu[qs]
+    if not hu then
+        return 
+    end
+    if hu.connection then
+        hu.connection:Disconnect()
+    end
+    if hu.highlight then
+        hu.highlight:Destroy()
+    end
+    if hu.billboard then
+        hu.billboard:Destroy()
+    end
+    cu[qs] = nil
+end
+local function xw(qs)
+    local hu = cu[qs]
+    if not hu then
+        return 
+    end
+    local jf = ab.UtilityESPEnabled == true
+    local gx = ab.UtilityESPColor or Color3.fromRGB(0, 255, 120)
+    if hu.highlight then
+        hu.highlight.Enabled = jf and ab.UtilityESPGlow == true
+        hu.highlight.OutlineColor = gx
+        hu.highlight.FillColor = gx
+    end
+    if hu.billboard then
+        hu.billboard.Enabled = jf and ab.UtilityESPName == true
+    end
+    if hu.label then
+        hu.label.TextColor3 = gx
+    end
+end
+local function dq(qs)
+    if not qs or qs.Name ~= 'Grenade' then
+        return 
+    end
+    if cu[qs] then
+        xw(qs)
+        return 
+    end
+    local dr = lk(qs)
+    if not dr then
+        task.delay(0.05, function()
+            if qs and qs.Parent then
+                dq(qs)
+            end
+        end)
+        return 
+    end
+    local me = Instance.new('Highlight')
+    me.Name = 'UtilityESP_Glow'
+    me.Adornee = qs
+    me.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    me.FillTransparency = 1
+    me.OutlineTransparency = 0
+    me.Parent = cs
+    local ew = Instance.new('BillboardGui')
+    ew.Name = 'UtilityESP_Name'
+    ew.Adornee = dr
+    ew.AlwaysOnTop = true
+    ew.Size = UDim2.fromOffset(120, 22)
+    ew.StudsOffset = Vector3.new(0, 2, 0)
+    ew.Parent = cs
+    local om = Instance.new('TextLabel')
+    om.BackgroundTransparency = 1
+    om.BorderSizePixel = 0
+    om.Size = UDim2.new(1, 0, 1, 0)
+    om.Font = Enum.Font.Code
+    om.Text = 'Grenade'
+    om.TextSize = 13
+    om.TextStrokeTransparency = 0
+    om.TextStrokeColor3 = Color3.new(0, 0, 0)
+    om.Parent = ew
+    cu[qs] = {
+        highlight = me,
+        billboard = ew,
+        label = om,
+        connection = qs.AncestryChanged:Connect(function(_, sa)
+            if sa == nil then
+                tw(qs)
+            end
+        end),
+    }
+    xw(qs)
+end
+local function tt()
+    for qs in pairs(cu) do
+        if not qs or not qs.Parent then
+            tw(qs)
+        else
+            xw(qs)
+        end
+    end
+end
+local function vc(kr)
+    if not kr or cr == kr then
+        return 
+    end
+    if cp then
+        cp:Disconnect()
+    end
+    cr = kr
+    for _, go in ipairs(kr:GetChildren()) do
+        if go.Name == 'Grenade' then
+            dq(go)
+        end
+    end
+    cp = kr.ChildAdded:Connect(function(go)
+        if go.Name == 'Grenade' then
+            dq(go)
+        end
+    end)
+end
+local function us()
+    local yt = workspace:FindFirstChild('World')
+    local kr = yt and yt:FindFirstChild('FX')
+    if kr then
+        vc(kr)
+    end
+    tt()
+end
+task.spawn(function()
+    local yt = workspace:WaitForChild('World', 30)
+    local kr = yt and yt:WaitForChild('FX', 30)
+    if kr then
+        vc(kr)
+    end
+end)
+local bm = nil
+local function fy()
+    if bm then
+        return 
+    end
+    bm = {
+        Brightness = bd.Brightness,
+        ClockTime = bd.ClockTime,
+        ExposureCompensation = bd.ExposureCompensation,
+        Ambient = bd.Ambient,
+        OutdoorAmbient = bd.OutdoorAmbient,
+        ColorShift_Top = bd.ColorShift_Top,
+        ColorShift_Bottom = bd.ColorShift_Bottom,
+    }
+end
+local function eg()
+    fy()
+    if not ab.LightingChangerEnabled then
+        return 
+    end
+    bd.Brightness = ab.LightingBrightness
+    bd.ClockTime = ab.LightingClockTime
+    bd.ExposureCompensation = ab.LightingExposure
+    bd.Ambient = ab.LightingAmbient
+    bd.OutdoorAmbient = ab.LightingOutdoorAmbient
+    bd.ColorShift_Top = ab.LightingColorShiftTop
+    bd.ColorShift_Bottom = ab.LightingColorShiftBottom
+end
+local function ub()
+    if not bm then
+        return 
+    end
+    for tb, yc in pairs(bm) do
+        pcall(function()
+            bd[tb] = yc
+        end)
+    end
+end
+local bi = {
+}
+for _, pp in ipairs(Enum.Material:GetEnumItems()) do
+    table.insert(bi, pp.Name)
+end
+table.sort(bi)
+local da = {
+}
+local ad = nil
+local function ky()
+    local yt = workspace:FindFirstChild('World')
+    local kr = yt and yt:FindFirstChild('FX')
+    if not kr then
+        return nil
+    end
+    local fv = u.CFrame.Position
+    local gv, gw = nil, math.huge
+    for _, go in ipairs(kr:GetChildren()) do
+        local qu, su = pcall(function()
+            return go:GetPivot()
+        end)
+        if qu and su then
+            local iv = (su.Position - fv).Magnitude
+            if iv < gw then
+                gv = go
+                gw = iv
+            end
+        end
+    end
+    return gv
+end
+local function ni(qs)
+    if qs.Name == 'HumanoidRootPart' or qs.Name == 'Joint' then
+        return false
+    end
+    if qs.Name == "RightArmWrap" or qs.Name == "LeftArmWrap" then
+        return false
+    end
+    return qs:IsA('MeshPart')
+end
+local function up(sb)
+    if not da[sb] then
+        da[sb] = {
+            Color = sb.Color,
+            Material = sb.Material,
+            Transparency = sb.Transparency,
+        }
+    end
+end
+local function uc(sb)
+    local original = da[sb]
+    if original and sb and sb.Parent then
+        sb.Color = original.Color
+        sb.Material = original.Material
+        sb.Transparency = original.Transparency
+    end
+    da[sb] = nil
+end
+local function ud(qg)
+    for sb in pairs(da) do
+        if (not qg) or (sb and sb:IsDescendantOf(qg)) then
+            uc(sb)
+        end
+    end
+end
+local function ej()
+    if not ab.WeaponChamsEnabled then
+        if ad then
+            ud()
+            ad = nil
+        end
+        return 
+    end
+    local yf = ky()
+    if not yf then
+        ud()
+        ad = nil
+        return 
+    end
+    if ad and ad ~= yf then
+        ud(ad)
+    end
+    ad = yf
+    local pp = Enum.Material[ab.WeaponChamsMaterial] or Enum.Material.ForceField
+    local xm = math.clamp(ab.WeaponChamsTransparency or 0, 0, 1)
+    for _, ir in ipairs(yf:GetDescendants()) do
+        if ni(ir) then
+            up(ir)
+            ir.Color = ab.WeaponChamsColor
+            ir.Material = pp
+            ir.Transparency = xm
+        end
+    end
+end
+local ap = {
+    Neverlose = '139452805868562',
+    Gamesense = '4817809188',
+    Fatality = '115982072912004',
+    Splash = '9117942473',
+    Thonk = '9113133157',
+    Cowbell = '128769169741511',
+    Slap = '140165921656547',
+    Tung = '103185549195508',
+    Hit = '115569575216445',
+    Ding = '135478009117226',
+    Chicken = '77584650945481',
+    Moan = '135062039022934',
+    Girl = '93739527256723',
+    ['Cat Girl'] = '104321578550512',
+    ['Tiki Tiki'] = '74203452628378',
+    Jew = '129005024491935',
+    Fart = '140335089989960',
+    Bubble = '73862411420375',
+    Tf2 = '137392628136734',
+    Cs2 = '131027008209398',
+    Mambo = '139262038476728',
+    Toma = '129098116998483',
+    Kirk = '77582495618566',
+    Plastic = '18950762637',
+    Lego = '140539866173088',
+    ['67'] = '127804183843596',
+}
+local at = {
+    'Normal',
+    'Neverlose',
+    'Gamesense',
+    'Fatality',
+    'Splash',
+    'Thonk',
+    'Cowbell',
+    'Slap',
+    'Tung',
+    'Hit',
+    'Ding',
+    'Chicken',
+    'Moan',
+    'Girl',
+    'Cat Girl',
+    'Tiki Tiki',
+    'Jew',
+    'Fart',
+    'Bubble',
+    'Tf2',
+    'Cs2',
+    'Mambo',
+    'Toma',
+    'Kirk',
+    'Plastic',
+    'Lego',
+    '67',
+}
+local ar = {
+}
+local as = {
+    Head = {
+        'HitMarkerHead1',
+    },
+    Body = {
+        'HitMarkerBody1',
+    },
+    Kill = {
+        'HitMarkerKill1',
+    },
+}
+local an = {
+    Head = setmetatable({
+    }, {
+        __mode = 'k',
+    }),
+    Body = setmetatable({
+    }, {
+        __mode = 'k',
+    }),
+    Kill = setmetatable({
+    }, {
+        __mode = 'k',
+    }),
+}
+local aq = {
+    HitMarkerHead1 = 'Head',
+    HitMarkerBody1 = 'Body',
+    HitMarkerKill1 = 'Kill',
+}
+local ao
+local function la(vz)
+    local ek = bs:FindFirstChild('Assets')
+    local vd = ek and ek:FindFirstChild('SFX')
+    local qc = vd and vd:FindFirstChild('Misc')
+    local lq = qc and qc:FindFirstChild('Gun')
+    local mf = lq and lq:FindFirstChild('HitMarker')
+    return mf and mf:FindFirstChild(vz)
+end
+local function fw(oi, vy)
+    if vy and vy:IsA('Sound') and not ar[oi] then
+        ar[oi] = {
+            SoundId = vy.SoundId,
+            Volume = vy.Volume,
+        }
+    end
+end
+local function lb(oi)
+    local yj = ab['HitSound' .. oi .. 'Volume']
+    if type(yj) ~= 'number' then
+        yj = 1
+    end
+    return math.clamp(yj, 0, 10)
+end
+local function ed(oi, vy, ux, gi)
+    if not vy or not vy:IsA('Sound') then
+        return 
+    end
+    local sq = as[oi]
+    if not sq then
+        return 
+    end
+    an[oi][vy] = true
+    if vy == la(sq[1]) then
+        fw(oi, vy)
+    end
+    ux = ux or ab['HitSound' .. oi] or 'Normal'
+    if gi then
+        if ux == 'Normal' then
+            local original = ar[oi]
+            if original and original.SoundId then
+                vy.SoundId = original.SoundId
+            end
+        else
+            local mq = ap[ux]
+            if mq then
+                vy.SoundId = 'rbxassetid://' .. mq
+            end
+        end
+    end
+    vy.Volume = lb(oi)
+end
+local function ee(oi)
+    for vy in pairs(an[oi]) do
+        if vy and vy.Parent then
+            ed(oi, vy, ab['HitSound' .. oi], false)
+        else
+            an[oi][vy] = nil
+        end
+    end
+end
+local function dw()
+    ee('Head')
+    ee('Body')
+    ee('Kill')
+end
+local function uq()
+    local ug = {
+        workspace,
+        bs,
+    }
+    pcall(function()
+        if bg and bg:FindFirstChild('PlayerGui') then
+            table.insert(ug, bg.PlayerGui)
+        end
+    end)
+    pcall(function()
+        table.insert(ug, cb)
+    end)
+    for _, uf in ipairs(ug) do
+        for _, ir in ipairs(uf:GetDescendants()) do
+            local oi = aq[ir.Name]
+            if oi and ir:IsA('Sound') then
+                an[oi][ir] = true
+            end
+        end
+    end
+end
+local function eb(oi, ux)
+    local sq = as[oi]
+    if not sq then
+        return 
+    end
+    local wz = la(sq[1])
+    if wz then
+        ed(oi, wz, ux, true)
+    end
+    for vy in pairs(an[oi]) do
+        if vy and vy.Parent then
+            ed(oi, vy, ux, false)
+        else
+            an[oi][vy] = nil
+        end
+    end
+end
+local function dz()
+    uq()
+    eb('Head', ab.HitSoundHead)
+    eb('Body', ab.HitSoundBody)
+    eb('Kill', ab.HitSoundKill)
+    dw()
+end
+local function ec(oi, vy)
+    an[oi][vy] = true
+    task.defer(function()
+        ed(oi, vy, ab['HitSound' .. oi], false)
+    end)
+    task.delay(0.05, function()
+        if vy and vy.Parent then
+            ed(oi, vy, ab['HitSound' .. oi], false)
+        end
+    end)
+    task.delay(0.2, function()
+        if vy and vy.Parent then
+            ed(oi, vy, ab['HitSound' .. oi], false)
+        end
+    end)
+end
+ao = game.DescendantAdded:Connect(function(ir)
+    local oi = aq[ir.Name]
+    if not oi or not ir:IsA('Sound') then
+        return 
+    end
+    ec(oi, ir)
+end)
+task.spawn(function()
+    local ek = bs:WaitForChild('Assets', 10)
+    local vd = ek and ek:WaitForChild('SFX', 10)
+    local qc = vd and vd:WaitForChild('Misc', 10)
+    local lq = qc and qc:WaitForChild('Gun', 10)
+    local mf = lq and lq:WaitForChild('HitMarker', 10)
+    if mf then
+        dz()
+    end
+end)
+local kl = math.floor
+local mn = math.huge
+local dj = math.abs
+local gq = math.clamp
+local function px(di, en)
+    return Vector3.new(math.min(di.X, en.X), math.min(di.Y, en.Y), math.min(di.Z, en.Z))
+end
+local function pq(di, en)
+    return Vector3.new(math.max(di.X, en.X), math.max(di.Y, en.Y), math.max(di.Z, en.Z))
+end
+local cv = {
+    Vector3.new(-1, -1, -1),
+    Vector3.new(-1, 1, -1),
+    Vector3.new(-1, 1, 1),
+    Vector3.new(-1, -1, 1),
+    Vector3.new(1, -1, -1),
+    Vector3.new(1, 1, -1),
+    Vector3.new(1, 1, 1),
+    Vector3.new(1, -1, 1),
+}
+local bw = {
+    {
+        "Head",
+        "UpperTorso",
+    },
+    {
+        "UpperTorso",
+        "LowerTorso",
+    },
+    {
+        "UpperTorso",
+        "LeftUpperArm",
+    },
+    {
+        "LeftUpperArm",
+        "LeftLowerArm",
+    },
+    {
+        "LeftLowerArm",
+        "LeftHand",
+    },
+    {
+        "UpperTorso",
+        "RightUpperArm",
+    },
+    {
+        "RightUpperArm",
+        "RightLowerArm",
+    },
+    {
+        "RightLowerArm",
+        "RightHand",
+    },
+    {
+        "LowerTorso",
+        "LeftUpperLeg",
+    },
+    {
+        "LeftUpperLeg",
+        "LeftLowerLeg",
+    },
+    {
+        "LeftLowerLeg",
+        "LeftFoot",
+    },
+    {
+        "LowerTorso",
+        "RightUpperLeg",
+    },
+    {
+        "RightUpperLeg",
+        "RightLowerLeg",
+    },
+    {
+        "RightLowerLeg",
+        "RightFoot",
+    },
+}
+local function nh(ql)
+    return ql == "Head" or ql:find("Torso") or ql:find("Leg") or ql:find("Arm") or ql:find("Hand") or ql:find("Foot") or ql == "HumanoidRootPart"
+end
+local function ku(sd)
+    local pz, qa, qb = mn, mn, mn
+    local pt, pu, pv = -mn, -mn, -mn
+    for mp = 1, #sd do
+        local rq = sd[mp]
+        local gf, wn = rq.CFrame, rq.Size
+        local wl, wm, wo = wn.X * 0.5, wn.Y * 0.5, wn.Z * 0.5
+        local hk = {
+            gf * Vector3.new(wl, wm, wo),
+            gf * Vector3.new(-wl, wm, wo),
+            gf * Vector3.new(wl, -wm, wo),
+            gf * Vector3.new(-wl, -wm, wo),
+            gf * Vector3.new(wl, wm, -wo),
+            gf * Vector3.new(-wl, wm, -wo),
+            gf * Vector3.new(wl, -wm, -wo),
+            gf * Vector3.new(-wl, -wm, -wo),
+        }
+        for of = 1, 8 do
+            local xy = hk[of]
+            if xy.X < pz then
+                pz = xy.X
+            end
+            if xy.Y < qa then
+                qa = xy.Y
+            end
+            if xy.Z < qb then
+                qb = xy.Z
+            end
+            if xy.X > pt then
+                pt = xy.X
+            end
+            if xy.Y > pu then
+                pu = xy.Y
+            end
+            if xy.Z > pv then
+                pv = xy.Z
+            end
+        end
+    end
+    local gc = Vector3.new((pz + pt) * 0.5, (qa + pu) * 0.5, (qb + pv) * 0.5)
+    local vi = Vector3.new(pt - pz, pu - qa, pv - qb)
+    return CFrame.new(gc), vi
+end
+local function yv(yt)
+    local ui, ms = u:WorldToViewportPoint(yt)
+    return Vector2.new(ui.X, ui.Y), ms, ui.Z
+end
+local function ft(gh, vi)
+    local pz, qa = mn, mn
+    local pt, pu = -mn, -mn
+    for mp = 1, #cv do
+        local ui = yv((gh + vi * 0.5 * cv[mp]).Position)
+        if ui.X < pz then
+            pz = ui.X
+        end
+        if ui.Y < qa then
+            qa = ui.Y
+        end
+        if ui.X > pt then
+            pt = ui.X
+        end
+        if ui.Y > pu then
+            pu = ui.Y
+        end
+    end
+    return {
+        topLeft = Vector2.new(kl(pz), kl(qa)),
+        topRight = Vector2.new(kl(pt), kl(qa)),
+        bottomLeft = Vector2.new(kl(pz), kl(pu)),
+        bottomRight = Vector2.new(kl(pt), kl(pu)),
+    }
+end
+local function ld()
+    if u and u.CameraSubject then
+        return u.CameraSubject.Parent
+    end
+    return bg.Character
+end
+local jb = {
+}
+local function qn(type, tc)
+    local ht = Drawing.new(type)
+    for og, xy in pairs(tc) do
+        ht[og] = xy
+    end
+    return ht
+end
+local function kw(qe, sc)
+    local ht = jb[qe]
+    if not ht then
+        return qe:FindFirstChild(sc)
+    end
+    local rq = ht.parts[sc]
+    if not rq or not rq.Parent then
+        rq = qe:FindFirstChild(sc)
+        ht.parts[sc] = rq
+    end
+    return rq
+end
+local jn = Instance.new("ScreenGui")
+jn.Name = "ESPScreenGui"
+jn.DisplayOrder = 2147483645
+jn.ResetOnSpawn = false
+jn.IgnoreGuiInset = true
+jn.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function()
+    jn.Parent = ac
+end)
+if not jn.Parent then
+    jn.Parent = ac
+end
+local function ff(qe)
+    local hd = Instance.new("Frame")
+    hd.Name = "ESPBox_" .. qe.Name
+    hd.BackgroundTransparency = 1
+    hd.BorderSizePixel = 0
+    hd.Visible = false
+    hd.Parent = jn
+    local fd = Instance.new("Frame")
+    fd.Name = "Box"
+    fd.Size = UDim2.new(1, 0, 1, 0)
+    fd.BackgroundTransparency = 1
+    fd.BorderSizePixel = 0
+    fd.Visible = false
+    fd.Parent = hd
+    local wi = Instance.new("UIStroke")
+    wi.Color = Color3.new(1, 1, 1)
+    wi.Thickness = 1
+    wi.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    wi.Parent = fd
+    local wj = Instance.new("UIGradient")
+    wj.Parent = wi
+    local jz = Instance.new("Frame")
+    jz.Name = "Fill"
+    jz.Size = UDim2.new(1, 0, 1, 0)
+    jz.BackgroundColor3 = Color3.new(1, 1, 1)
+    jz.BackgroundTransparency = 1
+    jz.BorderSizePixel = 0
+    jz.ZIndex = -1
+    jz.Parent = hd
+    local kc = Instance.new("UIGradient")
+    kc.Parent = jz
+    local hh = Instance.new("Frame")
+    hh.Name = "Corner"
+    hh.Size = UDim2.new(1, 0, 1, 0)
+    hh.BackgroundTransparency = 1
+    hh.BorderSizePixel = 0
+    hh.Visible = false
+    hh.Parent = hd
+    local hj = {
+    }
+    local function pn(ql)
+        local jq = Instance.new("Frame")
+        jq.Name = ql
+        jq.BorderSizePixel = 0
+        jq.BackgroundColor3 = Color3.new(1, 1, 1)
+        jq.Parent = hh
+        local ks = Instance.new("UIGradient")
+        ks.Parent = jq
+        return jq, ks
+    end
+    local oy = {
+        {
+            "TL_H",
+        },
+        {
+            "TL_V",
+        },
+        {
+            "TR_H",
+        },
+        {
+            "TR_V",
+        },
+        {
+            "BL_H",
+        },
+        {
+            "BL_V",
+        },
+        {
+            "BR_H",
+        },
+        {
+            "BR_V",
+        },
+    }
+    for _, ol in ipairs(oy) do
+        local jq, ks = pn(ol[1])
+        hj[ol[1]] = {
+            frame = jq,
+            gradient = ks,
+        }
+    end
+    return {
+        container = hd,
+        box = fd,
+        stroke = wi,
+        strokeGrad = wj,
+        fill = jz,
+        fillGrad = kc,
+        corner = hh,
+        cornerLines = hj,
+    }
+end
+local function dp(qe)
+    if qe == ld() then
+        return 
+    end
+    local ix = qn("Text", {
+        Color = ab.ESPDistanceColor,
+        Size = 13,
+        Font = 2,
+        Center = true,
+        Visible = false,
+    })
+    local vj = {
+    }
+    for mp = 1, #bw do
+        vj[mp] = qn("Line", {
+            Color = Color3.new(1, 1, 1),
+            Thickness = ab.ESPSkeletonThickness,
+            Visible = false,
+        })
+    end
+    local ln = ff(qe)
+    jb[qe] = {
+        guiBox = ln,
+        distTxt = ix,
+        skeleton = vj,
+        player = bo:GetPlayerFromCharacter(qe),
+        parts = {
+        },
+        boundingBoxParts = nil,
+    }
+end
+local dh = {
+}
+local function tv(qe)
+    local ht = jb[qe]
+    if not ht then
+        return 
+    end
+    if ht.guiBox then
+        if ht.guiBox.container then
+            ht.guiBox.container:Destroy()
+        end
+    end
+    if ht.distTxt then
+        ht.distTxt:Remove()
+    end
+    if ht.skeleton then
+        for _, oj in ipairs(ht.skeleton) do
+            oj:Remove()
+        end
+    end
+    jb[qe] = nil
+    dh[qe] = nil
+end
+local function md(qe)
+    local ht = jb[qe]
+    if not ht then
+        return 
+    end
+    if ht.guiBox and ht.guiBox.container then
+        ht.guiBox.container.Visible = false
+    end
+    ht.distTxt.Visible = false
+    for _, oj in ipairs(ht.skeleton) do
+        oj.Visible = false
+    end
+end
+local bq = {
+    "Humanoid",
+    "Head",
+    "UpperTorso",
+    "LowerTorso",
+    "LeftUpperArm",
+    "LeftLowerArm",
+    "LeftHand",
+    "RightUpperArm",
+    "RightLowerArm",
+    "RightHand",
+    "LeftUpperLeg",
+    "LeftLowerLeg",
+    "LeftFoot",
+    "RightUpperLeg",
+    "RightLowerLeg",
+    "RightFoot",
+}
+local function gm(qe)
+    if not qe or not qe:IsA("Model") then
+        return 
+    end
+    if jb[qe] then
+        return 
+    end
+    if string.len(qe.Name) ~= 32 then
+        return 
+    end
+    for _, sc in ipairs(bq) do
+        if not qe:FindFirstChild(sc) then
+            return 
+        end
+    end
+    dp(qe)
+end
+for _, ir in ipairs(workspace:GetDescendants()) do
+    if ir:IsA("Model") then
+        gm(ir)
+    end
+end
+local y = workspace.DescendantAdded:Connect(function(ir)
+    if ir:IsA("Model") then
+        task.defer(gm, ir)
+    elseif ir.Parent and ir.Parent:IsA("Model") then
+        task.defer(gm, ir.Parent)
+    end
+end)
+local z = workspace.DescendantRemoving:Connect(function(ir)
+    if ir:IsA("Model") and jb[ir] then
+        tv(ir)
+    end
+end)
+-- === Allow Dummys stuff ===
+local cg_EntitiesConn = nil
+local cg_EntitiesChildConn = nil
+local cg_DummyTrak = {}
+
+local function cg_AddEntity(qe)
+    if not qe or not qe:IsA("Model") then return end
+    if qe == ld() then return end
+    if jb[qe] then return end
+    if cg_DummyTrak[qe] then return end
+    cg_DummyTrak[qe] = true
+    dp(qe)
+end
+
+local function cg_RemoveEntity(qe)
+    if not qe then return end
+    cg_DummyTrak[qe] = nil
+    if jb[qe] then tv(qe) end
+end
+
+local function cg_ScanEntities()
+    local yt = workspace:FindFirstChild("World")
+    local en = yt and yt:FindFirstChild("Entities")
+    if not en then return end
+    for _, go in ipairs(en:GetChildren()) do
+        cg_AddEntity(go)
+    end
+end
+
+local function cg_ClearEntities()
+    for qe in pairs(cg_DummyTrak) do
+        if jb[qe] then tv(qe) end
+        cg_DummyTrak[qe] = nil
+    end
+end
+
+local function cg_WatchEntities()
+    if cg_EntitiesConn then
+        cg_EntitiesConn:Disconnect()
+        cg_EntitiesConn = nil
+    end
+    if cg_EntitiesChildConn then
+        cg_EntitiesChildConn:Disconnect()
+        cg_EntitiesChildConn = nil
+    end
+    local yt = workspace:FindFirstChild("World")
+    local en = yt and yt:FindFirstChild("Entities")
+    if not en then
+        -- Wait for it
+        task.spawn(function()
+            local yt2 = workspace:WaitForChild("World", 30)
+            local en2 = yt2 and yt2:WaitForChild("Entities", 30)
+            if en2 and ab.AllowDummys then
+                cg_ScanEntities()
+                cg_EntitiesChildConn = en2.ChildAdded:Connect(function(go)
+                    if ab.AllowDummys then cg_AddEntity(go) end
+                end)
+                cg_EntitiesConn = en2.ChildRemoved:Connect(function(go)
+                    cg_RemoveEntity(go)
+                end)
+            end
+        end)
+        return
+    end
+    if ab.AllowDummys then cg_ScanEntities() end
+    cg_EntitiesChildConn = en.ChildAdded:Connect(function(go)
+        if ab.AllowDummys then cg_AddEntity(go) end
+    end)
+    cg_EntitiesConn = en.ChildRemoved:Connect(function(go)
+        cg_RemoveEntity(go)
+    end)
+end
+
+local function lg(qe)
+    return bo:GetPlayerFromCharacter(qe)
+end
+local function lx(qe)
+    local uf = kw(qe, "HumanoidRootPart") or qe.PrimaryPart
+    if not uf then
+        return false
+    end
+    if uf:FindFirstChild("TeammateOverhead") then
+        return true
+    end
+    for _, go in ipairs(uf:GetChildren()) do
+        if go:IsA("BillboardGui") and go:FindFirstChild("PlayerDisplay") then
+            return true
+        end
+    end
+    return false
+end
+local function nj(qe)
+    local ht = jb[qe]
+    local xi = ht and ht.player or lg(qe)
+    if xi == bg then
+        return true
+    end
+    if not ab.TeamCheck then
+        return false
+    end
+    if lx(qe) then
+        return true
+    end
+    if xi and bg.Team ~= nil and xi.Team ~= nil then
+        return bg.Team == xi.Team
+    end
+    return false
+end
+local function nw(wu, qe, pe, iw)
+    if not wu or not wu:IsA("BasePart") then
+        return false
+    end
+    local qr = tick()
+    if qe then
+        local fg = dh[qe]
+        if fg and qr - fg.t < (ab.RaycastUpdateRate / 1000) then
+            return fg.v
+        end
+    end
+    local tj = u.CFrame.Position
+    local it = wu.Position - tj
+    local rz = RaycastParams.new()
+    rz.FilterType = Enum.RaycastFilterType.Exclude
+    local kd = {
+    }
+    if pe then
+        table.insert(kd, pe)
+    end
+    if iw then
+        for pm in pairs(jb) do
+            if pm ~= pe then
+                local uf = kw(pm, "HumanoidRootPart") or pm.PrimaryPart or kw(pm, "Head")
+                if uf and (iw - uf.Position).Magnitude <= 5 then
+                    table.insert(kd, pm)
+                end
+            end
+        end
+    end
+    rz.FilterDescendantsInstances = kd
+    local ue = workspace:Raycast(tj, it, rz)
+    local xy = (not ue) or ue.Instance:IsDescendantOf(wu.Parent)
+    if qe then
+        dh[qe] = {
+            v = xy,
+            t = qr,
+        }
+    end
+    return xy
+end
+local op = {
+}
+local ot = {
+}
+local function lh(qe, ex)
+    local sb = qe:FindFirstChild(ex)
+    if not sb then
+        return nil
+    end
+    local sw = sb.Position
+    local qr = tick()
+    local ta = sw
+    if ab.AimbotPrediction then
+        local pk = op[qe]
+        local pl = ot[qe]
+        if pk and pl then
+            local jc = qr - pl
+            if jc > 0 then
+                local ye = (sw - pk) / jc
+                ta = sw + ye * ab.AimbotPredictScale
+            end
+        end
+    end
+    op[qe] = sw
+    ot[qe] = qr
+    return ta
+end
+local du = false
+local wg = nil
+local wf = "Head"
+local kp = Instance.new("ScreenGui")
+kp.Name = "FOVScreenGui"
+kp.DisplayOrder = 2147483646
+kp.ResetOnSpawn = false
+kp.IgnoreGuiInset = true
+kp.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function()
+    kp.Parent = ac
+end)
+if not kp.Parent then
+    kp.Parent = ac
+end
+local function fe(ql)
+    local hd = Instance.new("Frame")
+    hd.Name = ql
+    hd.AnchorPoint = Vector2.new(0.5, 0.5)
+    hd.BackgroundTransparency = 1
+    hd.BorderSizePixel = 0
+    hd.Visible = false
+    hd.Parent = kp
+    local jz = Instance.new("Frame")
+    jz.Size = UDim2.new(1, 0, 1, 0)
+    jz.BackgroundColor3 = Color3.new(1, 1, 1)
+    jz.BackgroundTransparency = 1
+    jz.BorderSizePixel = 0
+    jz.Visible = true
+    jz.ZIndex = 1
+    jz.Parent = hd
+    local ka = Instance.new("UICorner")
+    ka.CornerRadius = UDim.new(1, 0)
+    ka.Parent = jz
+    local kc = Instance.new("UIGradient")
+    kc.Rotation = 0
+    kc.Parent = jz
+    local rm = Instance.new("Frame")
+    rm.Size = UDim2.new(1, 0, 1, 0)
+    rm.BackgroundTransparency = 1
+    rm.BorderSizePixel = 0
+    rm.ZIndex = 2
+    rm.Parent = hd
+    local rn = Instance.new("UICorner")
+    rn.CornerRadius = UDim.new(1, 0)
+    rn.Parent = rm
+    local wi = Instance.new("UIStroke")
+    wi.Color = Color3.new(1, 1, 1)
+    wi.Thickness = 2
+    wi.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    wi.Parent = rm
+    local wj = Instance.new("UIGradient")
+    wj.Rotation = 0
+    wj.Parent = wi
+    return {
+        container = hd,
+        fill = jz,
+        fillGrad = kc,
+        stroke = wi,
+        strokeGrad = wj,
+    }
+end
+local kn = fe("AimbotFOV")
+local xo = fe("TriggerbotFOV")
+local function ea(fg, gc, tf, gg, wb)
+    fg.container.Visible = gg.visible
+    if not gg.visible then
+        return 
+    end
+    fg.container.Position = UDim2.fromOffset(gc.X, gc.Y)
+    fg.container.Size = UDim2.fromOffset(tf * 2, tf * 2)
+    fg.stroke.Thickness = gg.thickness
+    fg.stroke.Transparency = gg.outlineTransp
+    fg.strokeGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, gg.outlineColor1),
+        ColorSequenceKeypoint.new(1, gg.outlineColor2),
+    })
+    fg.fill.BackgroundTransparency = gg.filled and gg.fillTransp or 1
+    fg.fillGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, gg.fillColor1),
+        ColorSequenceKeypoint.new(1, gg.fillColor2),
+    })
+    fg.strokeGrad.Rotation = wb
+    fg.fillGrad.Rotation = wb
+end
+local bp = {
+    "Head",
+    "UpperTorso",
+    "LowerTorso",
+    "LeftUpperArm",
+    "LeftLowerArm",
+    "LeftHand",
+    "RightUpperArm",
+    "RightLowerArm",
+    "RightHand",
+    "LeftUpperLeg",
+    "LeftLowerLeg",
+    "LeftFoot",
+    "RightUpperLeg",
+    "RightLowerLeg",
+    "RightFoot",
+}
+local function kx(pe, ri)
+    local ev, eu = nil, mn
+    local et = "Head"
+    local yk = u.ViewportSize
+    local gc = Vector2.new(yk.X / 2, yk.Y / 2)
+    for qe in pairs(jb) do
+        if qe == pe then
+            continue
+        end
+        if qe.Name:sub(1, 7) == "Dummy_" and not ab.AllowDummys then
+            continue
+        end
+        if qe:FindFirstChild("FinisherOverheadTemplate") then
+            continue
+        end
+        if nj(qe) then
+            continue
+        end
+        local ly = kw(qe, "Head")
+        if not ly then
+            continue
+        end
+        if ly:IsA("BasePart") and ly.Transparency == 1 then
+            continue
+        end
+        if ab.AimbotWallcheck and not nw(ly, qe, pe, ri) then
+            continue
+        end
+        local es = mn
+        local hq = nil
+        local lw = false
+        if type(ab.AimbotBone) == "table" then
+            for en, dk in pairs(ab.AimbotBone) do
+                if dk then
+                    lw = true
+                    local ey = type(dk) == "string" and dk or en
+                    local rq = kw(qe, ey)
+                    if rq then
+                        local wa, re = u:WorldToViewportPoint(rq.Position)
+                        if re and wa.Z > 0 then
+                            local ht = (Vector2.new(wa.X, wa.Y) - gc).Magnitude
+                            if ht < es then
+                                es = ht
+                                hq = ey
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        if not lw then
+            local wa, re = u:WorldToViewportPoint(ly.Position)
+            if re and wa.Z > 0 then
+                es = (Vector2.new(wa.X, wa.Y) - gc).Magnitude
+                hq = "Head"
+            end
+        end
+        if not hq then
+            continue
+        end
+        local uf = kw(qe, "HumanoidRootPart") or qe.PrimaryPart or ly
+        local iv = (ri - uf.Position).Magnitude
+        if iv <= 5 or iv > ab.AimbotMaxDistance then
+            continue
+        end
+        if es > ab.AimbotFOV then
+            continue
+        end
+        if es < eu then
+            eu = es
+            ev = qe
+            et = hq
+        end
+    end
+    return ev, et
+end
+local function ne(qe, ey, pe, ri)
+    if not qe or not qe.Parent then
+        return false
+    end
+    if qe == pe then
+        return false
+    end
+    if qe.Name:sub(1, 7) == "Dummy_" and not ab.AllowDummys then
+        return false
+    end
+    if qe:FindFirstChild("FinisherOverheadTemplate") then
+        return false
+    end
+    if nj(qe) then
+        return false
+    end
+    local ly = kw(qe, "Head")
+    if not ly then
+        return false
+    end
+    if ly:IsA("BasePart") and ly.Transparency == 1 then
+        return false
+    end
+    if ab.AimbotWallcheck and not nw(ly, qe, pe, ri) then
+        return false
+    end
+    local sb = kw(qe, ey or "Head") or ly
+    if not sb then
+        return false
+    end
+    local wa, re = u:WorldToViewportPoint(sb.Position)
+    if not re or wa.Z <= 0 then
+        return false
+    end
+    local uf = kw(qe, "HumanoidRootPart") or qe.PrimaryPart or ly
+    local iv = (ri - uf.Position).Magnitude
+    if iv <= 5 or iv > ab.AimbotMaxDistance then
+        return false
+    end
+    return true
+end
+local function lf(sb)
+    if not sb or not sb:IsA("BasePart") then
+        return 0
+    end
+    local iv = (u.CFrame.Position - sb.Position).Magnitude
+    if iv <= 0 then
+        return 0
+    end
+    local vi = sb.Size
+    local py = math.min(vi.X, vi.Y, vi.Z)
+    local yu = py / 2
+    local ko = math.rad(u.FieldOfView)
+    local uu = (yu * u.ViewportSize.Y) / (2 * iv * math.tan(ko / 2))
+    return uu
+end
+local function nv(pe, ri)
+    local yk = u.ViewportSize
+    local gc = Vector2.new(yk.X / 2, yk.Y / 2)
+    local tf = ab.TriggerbotRadius
+    for qe in pairs(jb) do
+        if qe == pe then
+            continue
+        end
+        if qe.Name:sub(1, 7) == "Dummy_" and not ab.AllowDummys then
+            continue
+        end
+        if qe:FindFirstChild("FinisherOverheadTemplate") then
+            continue
+        end
+        if nj(qe) then
+            continue
+        end
+        local ly = kw(qe, "Head")
+        if not ly then
+            continue
+        end
+        if ly:IsA("BasePart") and ly.Transparency == 1 then
+            continue
+        end
+        if not nw(ly, qe, pe, ri) then
+            continue
+        end
+        local uf = kw(qe, "HumanoidRootPart") or qe.PrimaryPart or ly
+        local iv = (ri - uf.Position).Magnitude
+        if iv <= 5 or iv > ab.AimbotMaxDistance then
+            continue
+        end
+        local lw = false
+        if type(ab.TriggerbotBone) == "table" then
+            for en, dk in pairs(ab.TriggerbotBone) do
+                if dk then
+                    lw = true
+                    local ey = type(dk) == "string" and dk or en
+                    local rq = kw(qe, ey)
+                    if rq then
+                        local wa, re = u:WorldToViewportPoint(rq.Position)
+                        if re and wa.Z > 0 then
+                            local ht = (Vector2.new(wa.X, wa.Y) - gc).Magnitude
+                            if ht <= tf then
+                                return true, qe
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        if not lw then
+            local wa, re = u:WorldToViewportPoint(ly.Position)
+            if re and wa.Z > 0 then
+                local ht = (Vector2.new(wa.X, wa.Y) - gc).Magnitude
+                if ht <= tf then
+                    return true, qe
+                end
+            end
+        end
+    end
+    return false, nil
+end
+local function li()
+    local yc = gq(ab.AimbotSensitivityify or 1, 0.1, 2)
+    if yc <= 1 then
+        return 0.5 + ((yc - 0.1) / 0.9) * 0.5
+    end
+    return yc
+end
+local function ds(qe, ey)
+    if not qe then
+        return 
+    end
+    local sb = kw(qe, ey) or kw(qe, "Head")
+    if not sb then
+        return 
+    end
+    local sw = lh(qe, ey) or sb.Position
+    local wa, re = u:WorldToViewportPoint(sw)
+    if not re then
+        return 
+    end
+    local qi = co:GetMouseLocation()
+    local jd = wa.X - qi.X
+    local je = wa.Y - qi.Y
+    local vx = gq(ab.AimbotSmoothing, 1, 100)
+    local jr = (1 / vx) * li()
+    if dj(jd) <= 1 and dj(je) <= 1 then
+        um(jd * li(), je * li())
+        return 
+    end
+    um(jd * jr, je * jr)
+end
+local function nd()
+    if Options and Options.AimbotKey and Options.AimbotKey.GetState then
+        return Options.AimbotKey:GetState()
+    end
+    return false
+end
+local function nu()
+    if Options and Options.TriggerbotKey and Options.TriggerbotKey.GetState then
+        return Options.TriggerbotKey:GetState()
+    end
+    return false
+end
+local de = 0
+local df = 0
+local dg = false
+local dd = false
+local function nk(wr)
+    if not wr then
+        return false
+    end
+    local yt = workspace:FindFirstChild("World")
+    if not yt then
+        return false
+    end
+    local kr = yt:FindFirstChild("FX")
+    if not kr then
+        return false
+    end
+    local ww = kw(wr, "HumanoidRootPart") or wr.PrimaryPart or kw(wr, "Head")
+    if not ww then
+        return false
+    end
+    local wv = ww.Position
+    local gv, gw = nil, math.huge
+    for _, yi in ipairs(kr:GetChildren()) do
+        local mi = yi:FindFirstChild("HumanoidRootPart")
+        if mi and mi:IsA("BasePart") then
+            local iv = (mi.Position - wv).Magnitude
+            if iv < gw then
+                gv = yi
+                gw = iv
+            end
+        end
+    end
+    if not gv then
+        return false
+    end
+    local qf = gv:FindFirstChild("model")
+    if qf then
+        local lu = qf:FindFirstChild("Handle")
+        if lu and lu:FindFirstChild("glare_attachment") then
+            return true
+        end
+    end
+    return false
+end
+local function xn()
+    if dd then
+        return 
+    end
+    if ab.TriggerbotScopeCheck then
+        local nt = false
+        local ss = bg:FindFirstChild("PlayerGui")
+        if ss then
+            local hm = ss:FindFirstChild("Crosshair")
+            if hm then
+                local ut = hm:FindFirstChild("Scope")
+                if ut and ut.Visible then
+                    nt = true
+                end
+            end
+        end
+        if not nt then
+            return 
+        end
+    end
+    local qr = tick()
+    if (qr - de) < df then
+        return 
+    end
+    dd = true
+    task.spawn(function()
+        ul(ab.TriggerbotClickHold / 1000)
+        de = tick()
+        local pb = math.min(ab.TriggerbotMinDelay, ab.TriggerbotMaxDelay)
+        local mc = math.max(ab.TriggerbotMinDelay, ab.TriggerbotMaxDelay)
+        df = (pb + math.random() * (mc - pb)) / 1000
+        dd = false
+    end)
+end
+local bh
+bh = bu.RenderStepped:Connect(function()
+    local yk = u.ViewportSize
+    local gc = Vector2.new(yk.X / 2, yk.Y / 2)
+    local wb = (tick() * math.max(ab.FOVSpinSpeed, 0.1) * 90) % 360
+    ea(kn, gc, ab.AimbotFOV, {
+        visible = ab.FOVEnabled and ab.AimbotEnabled,
+        thickness = ab.FOVThickness,
+        outlineColor1 = ab.FOVColor,
+        outlineColor2 = ab.FOVColor2,
+        outlineTransp = ab.FOVTransparency,
+        filled = ab.FOVFilled,
+        fillColor1 = ab.FOVFillColor,
+        fillColor2 = ab.FOVFillColor2,
+        fillTransp = ab.FOVFillTransp,
+    }, wb)
+    local wq = (tick() * math.max(ab.TriggerbotFOVSpinSpeed, 0.1) * 90) % 360
+    ea(xo, gc, ab.TriggerbotRadius, {
+        visible = ab.TriggerbotFOVEnabled and ab.TriggerbotEnabled,
+        thickness = ab.TriggerbotFOVThickness,
+        outlineColor1 = ab.TriggerbotFOVColor,
+        outlineColor2 = ab.TriggerbotFOVColor2,
+        outlineTransp = ab.TriggerbotFOVTransparency,
+        filled = ab.TriggerbotFOVFilled,
+        fillColor1 = ab.TriggerbotFOVFillColor,
+        fillColor2 = ab.TriggerbotFOVFillColor2,
+        fillTransp = ab.TriggerbotFOVFillTransp,
+    }, wq)
+    local pe = ld()
+    local pf = pe and pe:FindFirstChild("HumanoidRootPart")
+    local ri = pf and pf.Position or u.CFrame.Position
+    ej()
+    eg()
+    du = nd()
+    if ab.AimbotEnabled and du then
+        local wr, ey
+        if ab.AimbotSticky and ne(wg, wf, pe, ri) then
+            wr = wg
+            ey = wf
+        else
+            wr, ey = kx(pe, ri)
+            wg = wr
+            wf = ey or "Head"
+        end
+        if wr then
+            ds(wr, ey)
+        end
+    else
+        wg = nil
+        wf = "Head"
+    end
+    dg = nu()
+    if ab.TriggerbotEnabled and dg then
+        local ya, wy = nv(pe, ri)
+        if ya and (not ab.KatanaCheck or not nk(wy)) then
+            xn()
+        end
+    end
+    if not ab.ESPEnabled then
+        for qe in pairs(jb) do
+            md(qe)
+        end
+        return 
+    end
+    for qe, ht in pairs(jb) do
+        if not qe or not qe.Parent then
+            tv(qe)
+            continue
+        end
+        if qe == pe then
+            md(qe)
+            continue
+        end
+        if qe.Name:sub(1, 7) == "Dummy_" and not ab.AllowDummys then
+            md(qe)
+            continue
+        end
+        if qe:FindFirstChild("FinisherOverheadTemplate") then
+            continue
+        end
+        local kq = nj(qe)
+        if kq and not ab.ShowFriendlyESP then
+            md(qe)
+            continue
+        end
+        local ly = kw(qe, "Head")
+        if not ly or (ly:IsA("BasePart") and ly.Transparency == 1) then
+            md(qe)
+            continue
+        end
+        local _, lz = u:WorldToViewportPoint(ly.Position)
+        if not lz then
+            md(qe)
+            continue
+        end
+        local uf = kw(qe, "HumanoidRootPart") or qe.PrimaryPart or ly
+        local iv = (ri - uf.Position).Magnitude
+        if iv <= 5 or iv > ab.ESPMaxDistance then
+            md(qe)
+            continue
+        end
+        local ts = false
+        if not ht.boundingBoxParts then
+            ts = true
+        end
+        if not ts then
+            for _, rq in ipairs(ht.boundingBoxParts) do
+                if not rq.Parent then
+                    ts = true
+                    break
+                end
+            end
+        end
+        if ts then
+            ht.boundingBoxParts = {
+            }
+            for _, sb in ipairs(qe:GetChildren()) do
+                if sb:IsA("BasePart") and nh(sb.Name) then
+                    table.insert(ht.boundingBoxParts, sb)
+                end
+            end
+        end
+        local sd = ht.boundingBoxParts
+        if #sd == 0 then
+            md(qe)
+            continue
+        end
+        local ma = kw(qe, "Head")
+        local mj = kw(qe, "HumanoidRootPart") or qe.PrimaryPart
+        local xf = ma.Position + Vector3.new(0, 0.5, 0)
+        local fb = mj.Position - Vector3.new(0, 3, 0)
+        local xg, xh = u:WorldToViewportPoint(xf)
+        local ez, fa = u:WorldToViewportPoint(fb)
+        local mk, ml = u:WorldToViewportPoint(mj.Position)
+        if not ml and not xh then
+            md(qe)
+            continue
+        end
+        local mb = math.abs(xg.Y - ez.Y)
+        local ys = mb * 0.65
+        local xe = Vector2.new(math.floor(mk.X - ys / 2), math.floor(math.min(xg.Y, ez.Y)))
+        local fc = Vector2.new(math.floor(xe.X + ys), math.floor(xe.Y + mb))
+        local wn = Vector2.new(math.floor(ys), math.floor(mb))
+        if wn.X <= 0 or wn.Y <= 0 then
+            md(qe)
+            continue
+        end
+        local jk = ab.ESPAnimSpeed or 1
+        local wb = (tick() * jk * 90) % 360
+        local mm = (tick() * jk * 0.1) % 1
+        local tg = Color3.fromHSV(mm, 1, 1)
+        local te = math.abs(math.sin(tick() * jk * 3))
+        local ep = nw(ly, qe, pe, ri) and ab.ESPVisibleColor or ab.ESPInvisibleColor
+        local jl = ep
+        local jm = ab.ESPGradientColor2 or Color3.fromRGB(0, 200, 255)
+        local vk = ep
+        local iy = ab.ESPDistanceColor or Color3.new(1, 1, 1)
+        if ab.ESPAnimMode == 'Rainbow' then
+            jl = tg
+            jm = tg
+            vk = tg
+            iy = tg
+        elseif ab.ESPAnimMode == 'Pulse' then
+            jl = ep:Lerp(jm, te)
+            vk = ep:Lerp(jm, te)
+            iy = ab.ESPDistanceColor:Lerp(jm, te)
+        end
+        if ht.guiBox and ht.guiBox.container then
+            ht.guiBox.container.Position = UDim2.fromOffset(xe.X, xe.Y)
+            ht.guiBox.container.Size = UDim2.fromOffset(wn.X, wn.Y)
+            ht.guiBox.container.Visible = true
+            if ab.ESPFilled then
+                ht.guiBox.fill.Visible = true
+                ht.guiBox.fill.BackgroundTransparency = ab.ESPFillTransp
+                if ab.ESPAnimMode == 'Spinning Gradient' then
+                    ht.guiBox.fillGrad.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, jl),
+                        ColorSequenceKeypoint.new(1, jm),
+                    })
+                    ht.guiBox.fillGrad.Rotation = wb
+                else
+                    ht.guiBox.fillGrad.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, jl),
+                        ColorSequenceKeypoint.new(1, jl),
+                    })
+                    ht.guiBox.fillGrad.Rotation = 0
+                end
+            else
+                ht.guiBox.fill.Visible = false
+            end
+            if ab.ESPBox and not ab.ESPCornerBox then
+                ht.guiBox.box.Visible = true
+                ht.guiBox.corner.Visible = false
+                ht.guiBox.stroke.Thickness = ab.ESPBoxThickness
+                if ab.ESPAnimMode == 'Spinning Gradient' then
+                    ht.guiBox.strokeGrad.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, jl),
+                        ColorSequenceKeypoint.new(1, jm),
+                    })
+                    ht.guiBox.strokeGrad.Rotation = wb
+                else
+                    ht.guiBox.strokeGrad.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, jl),
+                        ColorSequenceKeypoint.new(1, jl),
+                    })
+                    ht.guiBox.strokeGrad.Rotation = 0
+                end
+            elseif ab.ESPCornerBox then
+                ht.guiBox.box.Visible = false
+                ht.guiBox.corner.Visible = true
+                local yl = wn.X
+                local ls = wn.Y
+                local gs = math.max(4, math.floor(yl * 0.2))
+                local yh = math.max(4, math.floor(ls * 0.2))
+                local xb = ab.ESPBoxThickness
+                local oz = {
+                    TL_H = {
+                        pos = UDim2.new(0, 0, 0, 0),
+                        size = UDim2.new(0, gs, 0, xb),
+                    },
+                    TL_V = {
+                        pos = UDim2.new(0, 0, 0, 0),
+                        size = UDim2.new(0, xb, 0, yh),
+                    },
+                    TR_H = {
+                        pos = UDim2.new(1, -gs, 0, 0),
+                        size = UDim2.new(0, gs, 0, xb),
+                    },
+                    TR_V = {
+                        pos = UDim2.new(1, -xb, 0, 0),
+                        size = UDim2.new(0, xb, 0, yh),
+                    },
+                    BL_H = {
+                        pos = UDim2.new(0, 0, 1, -xb),
+                        size = UDim2.new(0, gs, 0, xb),
+                    },
+                    BL_V = {
+                        pos = UDim2.new(0, 0, 1, -yh),
+                        size = UDim2.new(0, xb, 0, yh),
+                    },
+                    BR_H = {
+                        pos = UDim2.new(1, -gs, 1, -xb),
+                        size = UDim2.new(0, gs, 0, xb),
+                    },
+                    BR_V = {
+                        pos = UDim2.new(1, -xb, 1, -yh),
+                        size = UDim2.new(0, xb, 0, yh),
+                    },
+                }
+                for ql, ox in pairs(ht.guiBox.cornerLines) do
+                    local fh = oz[ql]
+                    ox.frame.Position = fh.pos
+                    ox.frame.Size = fh.size
+                    if ab.ESPAnimMode == 'Spinning Gradient' then
+                        ox.gradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, jl),
+                            ColorSequenceKeypoint.new(1, jm),
+                        })
+                        ox.gradient.Rotation = wb
+                    else
+                        ox.gradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, jl),
+                            ColorSequenceKeypoint.new(1, jl),
+                        })
+                        ox.gradient.Rotation = 0
+                    end
+                end
+            else
+                ht.guiBox.box.Visible = false
+                ht.guiBox.corner.Visible = false
+            end
+        end
+        if ab.ESPDistance then
+            ht.distTxt.Color = iy
+            ht.distTxt.Text = kl(iv / 3) .. "m"
+            ht.distTxt.Position = Vector2.new(xe.X + wn.X / 2, fc.Y + 2)
+            ht.distTxt.Visible = true
+        else
+            ht.distTxt.Visible = false
+        end
+        if ab.ESPSkeleton then
+            local hr = vk
+            if ab.ESPAnimMode == 'Spinning Gradient' then
+                hr = ep:Lerp(jm, te)
+            end
+            for mp, ry in ipairs(bw) do
+                local rs = kw(qe, ry[1])
+                local rt = kw(qe, ry[2])
+                local ow = ht.skeleton[mp]
+                if rs and rt then
+                    local uj, rf = yv(rs.Position)
+                    local uk, rg = yv(rt.Position)
+                    if rf and rg then
+                        ow.From = uj
+                        ow.To = uk
+                        ow.Color = hr
+                        ow.Thickness = ab.ESPSkeletonThickness or 1
+                        ow.Visible = true
+                    else
+                        ow.Visible = false
+                    end
+                else
+                    ow.Visible = false
+                end
+            end
+        else
+            for _, ow in ipairs(ht.skeleton) do
+                ow.Visible = false
+            end
+        end
+    end
+end)
+local am = tick()
+local al = 0
+local aj = 60
+local cy = bu.RenderStepped:Connect(function()
+    al = al + 1
+    if tick() - am >= 1 then
+        aj = al
+        am = tick()
+        al = 0
+    end
+    local st = 0
+    pcall(function()
+        st = kl(cd.Network.ServerStatsItem['Data Ping']:GetValue())
+    end)
+    if ab.ShowWatermark then
+        bc:SetWatermark(('creep.cc %s fps %s ms'):format(kl(aj), st))
+    end
+end)
+bc:SetWatermarkVisibility(ab.ShowWatermark)
+local dc = bc:CreateWindow({
+    Title = 'creep.cc',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2,
+})
+local ch = {
+    Aiming = dc:AddTab('Aiming'),
+    Triggerbot = dc:AddTab('Triggerbot'),
+    Visuals = dc:AddTab('Visuals'),
+    Performance = dc:AddTab('Performance'),
+    Skin = dc:AddTab('Skin'),
+    Misc = dc:AddTab('Misc'),
+    ['Ui'] = dc:AddTab('Ui'),
+}
+local q = ch.Aiming:AddLeftGroupbox('Aimbot')
+local o = ch.Aiming:AddRightGroupbox('Settings')
+q:AddToggle('AimbotEnabled', {
+    Text = 'Enabled',
+    Default = ab.AimbotEnabled,
+    Callback = function(xy)
+        ab.AimbotEnabled = xy
+    end,
+}):AddKeyPicker('AimbotKey', {
+    Default = 'None',
+    Mode = 'Hold',
+    Text = 'Aimbot',
+    NoUI = false,
+    Callback = function(xy)
+        du = xy
+    end,
+    ChangedCallback = function(xy)
+        ab.AimbotKey = xy
+    end,
+})
+q:AddToggle('AimbotWallcheck', {
+    Text = 'Wallcheck',
+    Default = ab.AimbotWallcheck,
+    Callback = function(xy)
+        ab.AimbotWallcheck = xy
+    end,
+})
+q:AddToggle('AimbotPrediction', {
+    Text = 'Prediction',
+    Default = ab.AimbotPrediction,
+    Callback = function(xy)
+        ab.AimbotPrediction = xy
+    end,
+})
+q:AddToggle('AimbotSticky', {
+    Text = 'Sticky Aim',
+    Default = ab.AimbotSticky,
+    Callback = function(xy)
+        ab.AimbotSticky = xy
+        if not xy then
+            wg = nil
+            wf = "Head"
+        end
+    end,
+})
+q:AddToggle('FOVEnabled', {
+    Text = 'fov',
+    Default = ab.FOVEnabled,
+    Callback = function(xy)
+        ab.FOVEnabled = xy
+    end,
+})
+q:AddToggle('TeamCheck', {
+    Text = 'Team Check',
+    Default = ab.TeamCheck,
+    Callback = function(xy)
+        ab.TeamCheck = xy
+    end,
+})
+q:AddDropdown('AimbotBone', {
+    Text = 'Target Bone',
+    Default = 1,
+    Multi = true,
+    Values = {
+        'Head',
+        'UpperTorso',
+        'LowerTorso',
+        'LeftUpperArm',
+        'LeftLowerArm',
+        'LeftHand',
+        'RightUpperArm',
+        'RightLowerArm',
+        'RightHand',
+        'LeftUpperLeg',
+        'LeftLowerLeg',
+        'LeftFoot',
+        'RightUpperLeg',
+        'RightLowerLeg',
+        'RightFoot',
+    },
+    Callback = function(xy)
+        ab.AimbotBone = xy
+    end,
+})
+o:AddSlider('AimbotFOV', {
+    Text = 'fov',
+    Default = ab.AimbotFOV,
+    Min = 30,
+    Max = 500,
+    Rounding = 0,
+    Suffix = ' px',
+    Callback = function(xy)
+        ab.AimbotFOV = kl(xy)
+    end,
+})
+o:AddSlider('AimbotSmoothing', {
+    Text = 'Smoothing',
+    Default = ab.AimbotSmoothing,
+    Min = 1,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.AimbotSmoothing = kl(xy)
+    end,
+})
+o:AddSlider('AimbotSensitivityify', {
+    Text = 'Sensitivity',
+    Default = ab.AimbotSensitivityify,
+    Min = 0.1,
+    Max = 2,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.AimbotSensitivityify = xy
+    end,
+})
+o:AddSlider('AimbotMaxDistance', {
+    Text = 'Max Distance',
+    Default = ab.AimbotMaxDistance,
+    Min = 50,
+    Max = 1000,
+    Rounding = 0,
+    Suffix = ' studs',
+    Callback = function(xy)
+        ab.AimbotMaxDistance = kl(xy)
+    end,
+})
+o:AddSlider('AimbotPredictScale', {
+    Text = 'Predict Strength',
+    Default = 8,
+    Min = 1,
+    Max = 30,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.AimbotPredictScale = xy / 100
+    end,
+})
+o:AddLabel('fov outline color'):AddColorPicker('FOVColor', {
+    Default = ab.FOVColor,
+    Title = 'fov outline 1',
+    Callback = function(xy)
+        ab.FOVColor = xy
+    end,
+})
+o:AddLabel('fov outline color 2'):AddColorPicker('FOVColor2', {
+    Default = ab.FOVColor2,
+    Title = 'fov outline 2',
+    Callback = function(xy)
+        ab.FOVColor2 = xy
+    end,
+})
+o:AddSlider('FOVThickness', {
+    Text = 'fov thickness',
+    Default = ab.FOVThickness,
+    Min = 1,
+    Max = 10,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.FOVThickness = xy
+    end,
+})
+o:AddSlider('FOVTransparency', {
+    Text = 'fov outline transpancy',
+    Default = 85,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.FOVTransparency = xy / 100
+    end,
+})
+o:AddToggle('FOVFilled', {
+    Text = 'fov filled',
+    Default = ab.FOVFilled,
+    Callback = function(xy)
+        ab.FOVFilled = xy
+    end,
+})
+o:AddLabel('fov fill color'):AddColorPicker('FOVFillColor', {
+    Default = ab.FOVFillColor,
+    Title = 'fov fill 1',
+    Callback = function(xy)
+        ab.FOVFillColor = xy
+    end,
+})
+o:AddLabel('fov fill color 2'):AddColorPicker('FOVFillColor2', {
+    Default = ab.FOVFillColor2,
+    Title = 'fov fill 2',
+    Callback = function(xy)
+        ab.FOVFillColor2 = xy
+    end,
+})
+o:AddSlider('FOVFillTransp', {
+    Text = 'fov fill transpancy',
+    Default = 85,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.FOVFillTransp = xy / 100
+    end,
+})
+o:AddSlider('FOVSpinSpeed', {
+    Text = 'fov spin speed',
+    Default = ab.FOVSpinSpeed,
+    Min = 0.1,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.FOVSpinSpeed = xy
+    end,
+})
+local ck = ch.Triggerbot:AddLeftGroupbox('Triggerbot')
+local cj = ch.Triggerbot:AddRightGroupbox('Settings')
+ck:AddToggle('TriggerbotEnabled', {
+    Text = 'Enabled',
+    Default = ab.TriggerbotEnabled,
+    Callback = function(xy)
+        ab.TriggerbotEnabled = xy
+    end,
+}):AddKeyPicker('TriggerbotKey', {
+    Default = 'None',
+    Mode = 'Hold',
+    Text = 'Triggerbot',
+    NoUI = false,
+    Callback = function(xy)
+        dg = xy
+    end,
+    ChangedCallback = function(xy)
+        ab.TriggerbotKey = xy
+    end,
+})
+ck:AddToggle('TriggerbotFOVEnabled', {
+    Text = 'fov',
+    Default = ab.TriggerbotFOVEnabled,
+    Callback = function(xy)
+        ab.TriggerbotFOVEnabled = xy
+    end,
+})
+ck:AddToggle('TriggerbotScopeCheck', {
+    Text = 'Scope Check',
+    Default = ab.TriggerbotScopeCheck,
+    Callback = function(xy)
+        ab.TriggerbotScopeCheck = xy
+    end,
+})
+ck:AddToggle('KatanaCheck', {
+    Text = 'Anti Katana',
+    Default = ab.KatanaCheck,
+    Callback = function(xy)
+        ab.KatanaCheck = xy
+    end,
+})
+ck:AddDropdown('TriggerbotBone', {
+    Text = 'Hitbox',
+    Default = 1,
+    Multi = true,
+    Values = {
+        'Head',
+        'UpperTorso',
+        'LowerTorso',
+        'LeftUpperArm',
+        'LeftLowerArm',
+        'LeftHand',
+        'RightUpperArm',
+        'RightLowerArm',
+        'RightHand',
+        'LeftUpperLeg',
+        'LeftLowerLeg',
+        'LeftFoot',
+        'RightUpperLeg',
+        'RightLowerLeg',
+        'RightFoot',
+    },
+    Callback = function(xy)
+        ab.TriggerbotBone = xy
+    end,
+})
+cj:AddSlider('TriggerbotRadius', {
+    Text = 'Radius',
+    Default = ab.TriggerbotRadius,
+    Min = 1,
+    Max = 100,
+    Rounding = 0,
+    Suffix = ' px',
+    Callback = function(xy)
+        ab.TriggerbotRadius = kl(xy)
+    end,
+})
+cj:AddSlider('TriggerbotMinDelay', {
+    Text = 'Min Delay',
+    Default = ab.TriggerbotMinDelay,
+    Min = 0,
+    Max = 500,
+    Rounding = 0,
+    Suffix = ' ms',
+    Callback = function(xy)
+        ab.TriggerbotMinDelay = kl(xy)
+    end,
+})
+cj:AddSlider('TriggerbotMaxDelay', {
+    Text = 'Max Delay',
+    Default = ab.TriggerbotMaxDelay,
+    Min = 0,
+    Max = 500,
+    Rounding = 0,
+    Suffix = ' ms',
+    Callback = function(xy)
+        ab.TriggerbotMaxDelay = kl(xy)
+    end,
+})
+cj:AddSlider('TriggerbotClickHold', {
+    Text = 'Base Delay',
+    Default = ab.TriggerbotClickHold,
+    Min = 10,
+    Max = 150,
+    Rounding = 0,
+    Suffix = ' ms',
+    Callback = function(xy)
+        ab.TriggerbotClickHold = kl(xy)
+    end,
+})
+cj:AddLabel('fov outline color'):AddColorPicker('TriggerbotFOVColor', {
+    Default = ab.TriggerbotFOVColor,
+    Title = 'fov outline 1',
+    Callback = function(xy)
+        ab.TriggerbotFOVColor = xy
+    end,
+})
+cj:AddLabel('fov outline color 2'):AddColorPicker('TriggerbotFOVColor2', {
+    Default = ab.TriggerbotFOVColor2,
+    Title = 'fov outline 2',
+    Callback = function(xy)
+        ab.TriggerbotFOVColor2 = xy
+    end,
+})
+cj:AddSlider('TriggerbotFOVThickness', {
+    Text = 'fov thickness',
+    Default = ab.TriggerbotFOVThickness,
+    Min = 1,
+    Max = 10,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.TriggerbotFOVThickness = xy
+    end,
+})
+cj:AddSlider('TriggerbotFOVTransparency', {
+    Text = 'fov outline transpancy',
+    Default = 50,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.TriggerbotFOVTransparency = xy / 100
+    end,
+})
+cj:AddToggle('TriggerbotFOVFilled', {
+    Text = 'fov filled',
+    Default = ab.TriggerbotFOVFilled,
+    Callback = function(xy)
+        ab.TriggerbotFOVFilled = xy
+    end,
+})
+cj:AddLabel('fov fill color'):AddColorPicker('TriggerbotFOVFillColor', {
+    Default = ab.TriggerbotFOVFillColor,
+    Title = 'fov fill 1',
+    Callback = function(xy)
+        ab.TriggerbotFOVFillColor = xy
+    end,
+})
+cj:AddLabel('fov fill color 2'):AddColorPicker('TriggerbotFOVFillColor2', {
+    Default = ab.TriggerbotFOVFillColor2,
+    Title = 'fov fill 2',
+    Callback = function(xy)
+        ab.TriggerbotFOVFillColor2 = xy
+    end,
+})
+cj:AddSlider('TriggerbotFOVFillTransp', {
+    Text = 'fov fill transpancy',
+    Default = 60,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.TriggerbotFOVFillTransp = xy / 100
+    end,
+})
+cj:AddSlider('TriggerbotFOVSpinSpeed', {
+    Text = 'fov spin speed',
+    Default = ab.TriggerbotFOVSpinSpeed,
+    Min = 0.1,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.TriggerbotFOVSpinSpeed = xy
+    end,
+})
+local ag = ch.Visuals:AddLeftGroupbox('ESP')
+local ah = ch.Visuals:AddRightGroupbox('Settings')
+ag:AddToggle('ESPEnabled', {
+    Text = 'ESP Enabled',
+    Default = ab.ESPEnabled,
+    Callback = function(xy)
+        ab.ESPEnabled = xy
+    end,
+})
+ag:AddToggle('ESPBox', {
+    Text = 'Box',
+    Default = ab.ESPBox,
+    Callback = function(xy)
+        ab.ESPBox = xy
+    end,
+})
+ag:AddToggle('ESPCornerBox', {
+    Text = 'Corner Box',
+    Default = ab.ESPCornerBox,
+    Callback = function(xy)
+        ab.ESPCornerBox = xy
+    end,
+})
+ag:AddToggle('ESPFilled', {
+    Text = 'Filled Box',
+    Default = ab.ESPFilled,
+    Callback = function(xy)
+        ab.ESPFilled = xy
+    end,
+})
+ag:AddToggle('ESPDistance', {
+    Text = 'Distance',
+    Default = ab.ESPDistance,
+    Callback = function(xy)
+        ab.ESPDistance = xy
+    end,
+})
+ag:AddToggle('ESPSkeleton', {
+    Text = 'Skeleton',
+    Default = ab.ESPSkeleton,
+    Callback = function(xy)
+        ab.ESPSkeleton = xy
+    end,
+})
+ag:AddToggle('ShowFriendlyESP', {
+    Text = 'Show Friendlies',
+    Default = ab.ShowFriendlyESP,
+    Callback = function(xy)
+        ab.ShowFriendlyESP = xy
+    end,
+})
+ag:AddDropdown('ESPAnimMode', {
+    Text = 'Animation Mode',
+    Default = ab.ESPAnimMode,
+    Values = {
+        'Static',
+        'Rainbow',
+        'Spinning Gradient',
+        'Pulse',
+    },
+    Callback = function(xy)
+        ab.ESPAnimMode = xy
+    end,
+})
+ag:AddSlider('ESPAnimSpeed', {
+    Text = 'Animation Speed',
+    Default = ab.ESPAnimSpeed,
+    Min = 0.1,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.ESPAnimSpeed = xy
+    end,
+})
+ah:AddSlider('ESPMaxDistance', {
+    Text = 'Max Distance',
+    Default = ab.ESPMaxDistance,
+    Min = 50,
+    Max = 1000,
+    Rounding = 0,
+    Suffix = ' studs',
+    Callback = function(xy)
+        ab.ESPMaxDistance = kl(xy)
+    end,
+})
+ah:AddSlider('ESPBoxThickness', {
+    Text = 'Box Thickness',
+    Default = ab.ESPBoxThickness,
+    Min = 1,
+    Max = 5,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.ESPBoxThickness = kl(xy)
+    end,
+})
+ah:AddSlider('ESPSkeletonThickness', {
+    Text = 'Skeleton Thickness',
+    Default = ab.ESPSkeletonThickness or 1,
+    Min = 1,
+    Max = 5,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.ESPSkeletonThickness = kl(xy)
+        for qe, ht in pairs(jb) do
+            if ht.skeleton then
+                for _, ow in ipairs(ht.skeleton) do
+                    ow.Thickness = ab.ESPSkeletonThickness
+                end
+            end
+        end
+    end,
+})
+ah:AddSlider('ESPFillTransp', {
+    Text = 'Fill Transparency',
+    Default = 70,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.ESPFillTransp = xy / 100
+    end,
+})
+ah:AddLabel('Visible Color'):AddColorPicker('ESPVisibleColor', {
+    Default = ab.ESPVisibleColor,
+    Callback = function(xy)
+        ab.ESPVisibleColor = xy
+    end,
+})
+ah:AddLabel('Hidden Color'):AddColorPicker('ESPInvisibleColor', {
+    Default = ab.ESPInvisibleColor,
+    Callback = function(xy)
+        ab.ESPInvisibleColor = xy
+    end,
+})
+ah:AddLabel('Distance Color'):AddColorPicker('ESPDistanceColor', {
+    Default = ab.ESPDistanceColor,
+    Callback = function(xy)
+        ab.ESPDistanceColor = xy
+    end,
+})
+ah:AddLabel('Gradient Color 2'):AddColorPicker('ESPGradientColor2', {
+    Default = ab.ESPGradientColor2,
+    Callback = function(xy)
+        ab.ESPGradientColor2 = xy
+    end,
+})
+local cz = ch.Visuals:AddRightGroupbox('Weapon Chams')
+cz:AddToggle('WeaponChamsEnabled', {
+    Text = 'Enabled',
+    Default = ab.WeaponChamsEnabled,
+    Callback = function(xy)
+        ab.WeaponChamsEnabled = xy
+        if not xy then
+            ud()
+        end
+    end,
+})
+cz:AddDropdown('WeaponChamsMaterial', {
+    Text = 'Material',
+    Default = ab.WeaponChamsMaterial,
+    Values = bi,
+    Callback = function(xy)
+        ab.WeaponChamsMaterial = xy
+        ej()
+    end,
+})
+cz:AddSlider('WeaponChamsTransparency', {
+    Text = 'Transparency',
+    Default = ab.WeaponChamsTransparency,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Suffix = '%',
+    Callback = function(xy)
+        ab.WeaponChamsTransparency = xy / 100
+        ej()
+    end,
+})
+cz:AddLabel('Color'):AddColorPicker('WeaponChamsColor', {
+    Default = ab.WeaponChamsColor,
+    Title = 'Weapon Chams Color',
+    Callback = function(xy)
+        ab.WeaponChamsColor = xy
+        ej()
+    end,
+})
+local ax = ch.Visuals:AddLeftGroupbox('Bullet Tracers')
+ax:AddToggle('HitTracersEnabled', {
+    Text = 'Enabled',
+    Default = ab.HitTracersEnabled,
+    Callback = function(xy)
+        ab.HitTracersEnabled = xy
+        if xy then
+            ur()
+        end
+    end,
+})
+ax:AddLabel('Color'):AddColorPicker('HitTracerColor', {
+    Default = ab.HitTracerColor,
+    Title = 'Hit Tracer Color',
+    Callback = function(xy)
+        ab.HitTracerColor = xy
+    end,
+})
+ax:AddSlider('HitTracerThickness', {
+    Text = 'Thickness',
+    Default = ab.HitTracerThickness * 100,
+    Min = 1,
+    Max = 50,
+    Rounding = 0,
+    Callback = function(xy)
+        ab.HitTracerThickness = xy / 100
+    end,
+})
+ax:AddSlider('HitTracerLifetime', {
+    Text = 'Lifetime',
+    Default = ab.HitTracerLifetime * 100,
+    Min = 10,
+    Max = 500,
+    Rounding = 0,
+    Suffix = ' ms',
+    Callback = function(xy)
+        ab.HitTracerLifetime = xy / 100
+    end,
+})
+ax:AddSlider('HitTracerFadeIn', {
+    Text = 'Fade In',
+    Default = ab.HitTracerFadeIn * 100,
+    Min = 0,
+    Max = 200,
+    Rounding = 0,
+    Suffix = ' ms',
+    Callback = function(xy)
+        ab.HitTracerFadeIn = xy / 100
+    end,
+})
+ax:AddSlider('HitTracerFadeOut', {
+    Text = 'Fade Out',
+    Default = ab.HitTracerFadeOut * 100,
+    Min = 0,
+    Max = 300,
+    Rounding = 0,
+    Suffix = ' ms',
+    Callback = function(xy)
+        ab.HitTracerFadeOut = xy / 100
+    end,
+})
+local ct = ch.Visuals:AddLeftGroupbox('Utility ESP')
+ct:AddToggle('UtilityESPEnabled', {
+    Text = 'Enabled',
+    Default = ab.UtilityESPEnabled,
+    Callback = function(xy)
+        ab.UtilityESPEnabled = xy
+        us()
+    end,
+})
+ct:AddToggle('UtilityESPName', {
+    Text = 'Name',
+    Default = ab.UtilityESPName,
+    Callback = function(xy)
+        ab.UtilityESPName = xy
+        tt()
+    end,
+})
+ct:AddToggle('UtilityESPGlow', {
+    Text = 'Glow',
+    Default = ab.UtilityESPGlow,
+    Callback = function(xy)
+        ab.UtilityESPGlow = xy
+        tt()
+    end,
+})
+ct:AddLabel('Color'):AddColorPicker('UtilityESPColor', {
+    Default = ab.UtilityESPColor,
+    Title = 'Utility ESP Color',
+    Callback = function(xy)
+        ab.UtilityESPColor = xy
+        tt()
+    end,
+})
+local be = ch.Visuals:AddLeftGroupbox('Lighting Changer')
+be:AddToggle('LightingChangerEnabled', {
+    Text = 'Enabled',
+    Default = ab.LightingChangerEnabled,
+    Callback = function(xy)
+        ab.LightingChangerEnabled = xy
+        if xy then
+            eg()
+        else
+            ub()
+        end
+    end,
+})
+be:AddSlider('LightingBrightness', {
+    Text = 'Brightness',
+    Default = ab.LightingBrightness,
+    Min = 0,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.LightingBrightness = xy
+        eg()
+    end,
+})
+be:AddSlider('LightingClockTime', {
+    Text = 'Time',
+    Default = ab.LightingClockTime,
+    Min = 0,
+    Max = 24,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.LightingClockTime = xy
+        eg()
+    end,
+})
+be:AddSlider('LightingExposure', {
+    Text = 'Exposure',
+    Default = ab.LightingExposure,
+    Min = -5,
+    Max = 5,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.LightingExposure = xy
+        eg()
+    end,
+})
+be:AddLabel('Ambient'):AddColorPicker('LightingAmbient', {
+    Default = ab.LightingAmbient,
+    Title = 'Ambient',
+    Callback = function(xy)
+        ab.LightingAmbient = xy
+        eg()
+    end,
+})
+be:AddLabel('Outdoor Ambient'):AddColorPicker('LightingOutdoorAmbient', {
+    Default = ab.LightingOutdoorAmbient,
+    Title = 'Outdoor Ambient',
+    Callback = function(xy)
+        ab.LightingOutdoorAmbient = xy
+        eg()
+    end,
+})
+be:AddLabel('Color Shift Top'):AddColorPicker('LightingColorShiftTop', {
+    Default = ab.LightingColorShiftTop,
+    Title = 'Color Shift Top',
+    Callback = function(xy)
+        ab.LightingColorShiftTop = xy
+        eg()
+    end,
+})
+be:AddLabel('Color Shift Bottom'):AddColorPicker('LightingColorShiftBottom', {
+    Default = ab.LightingColorShiftBottom,
+    Title = 'Color Shift Bottom',
+    Callback = function(xy)
+        ab.LightingColorShiftBottom = xy
+        eg()
+    end,
+})
+local ca = ch.Visuals:AddRightGroupbox('Skybox Changer')
+ca:AddDropdown('SkyboxSelection', {
+    Text = 'Skybox',
+    Default = 1,
+    Values = {
+        "Minecraft",
+        "Dreaming",
+        "Space",
+        "Cartoony",
+        "Night",
+        "Pink",
+        "Red",
+        "Purple",
+        "Milkyway",
+        "Galaxy",
+        "Anime",
+    },
+    Callback = function(xy)
+        local hu = bz[xy]
+        if not hu then
+            return 
+        end
+        local vv = bd:FindFirstChildOfClass("Sky")
+        if not vv then
+            vv = Instance.new("Sky", bd)
+        end
+        vv.SkyboxBk = hu.SkyboxBk or vv.SkyboxBk
+        vv.SkyboxDn = hu.SkyboxDn or vv.SkyboxDn
+        vv.SkyboxFt = hu.SkyboxFt or vv.SkyboxFt
+        vv.SkyboxLf = hu.SkyboxLf or vv.SkyboxLf
+        vv.SkyboxRt = hu.SkyboxRt or vv.SkyboxRt
+        vv.SkyboxUp = hu.SkyboxUp or vv.SkyboxUp
+        vv.StarCount = hu.StarCount or vv.StarCount
+        vv.CelestialBodiesShown = false
+    end,
+})
+local bn = ch.Performance:AddLeftGroupbox('Performance')
+bn:AddSlider('RaycastUpdateRate', {
+    Text = 'Raycast Delay',
+    Default = ab.RaycastUpdateRate,
+    Min = 0,
+    Max = 500,
+    Rounding = 0,
+    Suffix = ' ms',
+    Tooltip = '(higher = better FPS, lower = more accurate)',
+    Callback = function(xy)
+        ab.RaycastUpdateRate = kl(xy)
+    end,
+})
+local by = ch.Skin:AddLeftGroupbox('Skin Changer')
+by:AddToggle('UseUnlockAll', {
+    Text = 'Use Unlock All',
+    Default = false,
+    Tooltip = 'Unlock All',
+    Callback = function(xy)
+        if xy then
+            if ba() then
+                local jp = type(identifyexecutor) == "function" and identifyexecutor() or "Unknown"
+                bl:Notify({
+                    Title = "Skin Changer",
+                    Content = "Executor (" .. jp .. ") unsupported for Unlock All.",
+                    Icon = "alert",
+                })
+                if Options.UseUnlockAll then
+                    Options.UseUnlockAll:SetValue(false)
+                end
+                return 
+            end
+            task.spawn(function()
+                pcall(bv)
+            end)
+        else
+            ce()
+        end
+    end,
+})
+local x = {
+}
+for og, _ in pairs(db) do
+    table.insert(x, og)
+end
+table.sort(x)
+by:AddDropdown('SkinCategory', {
+    Text = 'Category',
+    Default = 1,
+    Values = x,
+    Callback = function(xy)
+        local yr = {
+        }
+        for og, _ in pairs(db[xy]) do
+            table.insert(yr, og)
+        end
+        table.sort(yr)
+        Options.SkinWeapon:SetValues(yr)
+        Options.SkinWeapon:SetValue(yr[1])
+    end,
+})
+by:AddDropdown('SkinWeapon', {
+    Text = 'Weapon',
+    Default = 1,
+    Values = {
+        "ak47",
+    },
+    Callback = function(xy)
+        local gb = Options.SkinCategory.Value
+        if db[gb] and db[gb][xy] then
+            local vt = db[gb][xy]
+            local kf = {
+            }
+            for _, vl in ipairs(vt) do
+                if vl ~= "base" then
+                    table.insert(kf, vl)
+                end
+            end
+            Options.SkinName:SetValues(kf)
+            Options.SkinName:SetValue(kf[1])
+        end
+    end,
+})
+by:AddDropdown('SkinName', {
+    Text = 'Skin',
+    Default = 1,
+    Values = {
+        "",
+    },
+    Callback = function(xy)
+        if Options.UseUnlockAll and Options.UseUnlockAll.Value and not ba() then
+            if Options.SkinWeapon and Options.SkinWeapon.Value and xy and xy ~= "" then
+                task.spawn(function()
+                    local qd = bv()
+                    if qd and type(qd.SetEquipped) == "function" then
+                        pcall(function()
+                            qd.SetEquipped(Options.SkinWeapon.Value, "skin", xy)
+                        end)
+                    end
+                end)
+            end
+        end
+    end,
+})
+by:AddButton('Apply Skin', function()
+    if Options.UseUnlockAll and Options.UseUnlockAll.Value and not ba() then
+        task.spawn(function()
+            local qd = bv()
+            if qd and type(qd.SetEquipped) == "function" then
+                pcall(function()
+                    qd.SetEquipped(Options.SkinWeapon.Value, "skin", Options.SkinName.Value)
+                end)
+            end
+        end)
+        cg(Options.SkinCategory.Value, Options.SkinWeapon.Value, Options.SkinName.Value, false)
+    else
+        cg(Options.SkinCategory.Value, Options.SkinWeapon.Value, Options.SkinName.Value, false)
+    end
+    bl:Notify({
+        Title = "creep.cc",
+        Content = "Successfully applied " .. Options.SkinName.Value .. " skin to " .. Options.SkinWeapon.Value .. "!",
+        Icon = "crown",
+    })
+end)
+by:AddInput('SavedSkinsData', {
+    Text = 'Saved Skins Data',
+    Default = '{}',
+    Callback = function(xy)
+        if not xy or xy == "" or xy == "{}" then
+            return 
+        end
+        pcall(function()
+            local hy = ay:JSONDecode(xy)
+            for og, vs in pairs(hy) do
+                local gb, yo = string.match(og, "([^%.]+)%.([^%.]+)")
+                if gb and yo then
+                    if Options.UseUnlockAll and Options.UseUnlockAll.Value and not ba() then
+                        task.spawn(function()
+                            local qd = bv()
+                            if qd and type(qd.SetEquipped) == "function" then
+                                pcall(function()
+                                    qd.SetEquipped(yo, "skin", vs)
+                                end)
+                            end
+                        end)
+                    end
+                    cg(gb, yo, vs, true)
+                end
+            end
+        end)
+    end,
+})
+pcall(function()
+    if Options.SavedSkinsData then
+        if Options.SavedSkinsData.Element then
+            Options.SavedSkinsData.Element.Visible = false
+        end
+        for _, go in ipairs(by.Container:GetChildren()) do
+            if go:IsA("TextLabel") and go.Text == 'Saved Skins Data' then
+                go.Visible = false
+            end
+            if go:IsA("Frame") and go:FindFirstChild("Fill") == nil and go.Size.Y.Offset == 20 then
+
+            end
+        end
+        local nb = Options.SavedSkinsData.Element
+        if nb and nb.Parent then
+            local rl = nb.Parent
+            rl.Visible = false
+            for _, go in ipairs(rl.Parent:GetChildren()) do
+                if go:IsA("TextLabel") and go.Text == 'Saved Skins Data' then
+                    go.Visible = false
+                end
+            end
+        end
+    end
+end)
+local my = x[1]
+local na = {
+}
+for og, _ in pairs(db[my]) do
+    table.insert(na, og)
+end
+table.sort(na)
+Options.SkinWeapon:SetValues(na)
+Options.SkinWeapon:SetValue(na[1])
+local mz = db[my][na[1]]
+local ke = {
+}
+for _, vl in ipairs(mz) do
+    if vl ~= "base" then
+        table.insert(ke, vl)
+    end
+end
+Options.SkinName:SetValues(ke)
+if #ke > 0 then
+    Options.SkinName:SetValue(ke[1])
+end
+local bk = ch.Misc:AddLeftGroupbox('Hitsounds')
+bk:AddDropdown('HitSoundHead', {
+    Text = 'Head',
+    Default = ab.HitSoundHead,
+    Values = at,
+    Callback = function(xy)
+        ab.HitSoundHead = xy
+        eb('Head', xy)
+    end,
+})
+bk:AddSlider('HitSoundHeadVolume', {
+    Text = 'Head Volume',
+    Default = ab.HitSoundHeadVolume,
+    Min = 0,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.HitSoundHeadVolume = xy
+        ee('Head')
+    end,
+})
+bk:AddDropdown('HitSoundBody', {
+    Text = 'Body',
+    Default = ab.HitSoundBody,
+    Values = at,
+    Callback = function(xy)
+        ab.HitSoundBody = xy
+        eb('Body', xy)
+    end,
+})
+bk:AddSlider('HitSoundBodyVolume', {
+    Text = 'Body Volume',
+    Default = ab.HitSoundBodyVolume,
+    Min = 0,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.HitSoundBodyVolume = xy
+        ee('Body')
+    end,
+})
+bk:AddDropdown('HitSoundKill', {
+    Text = 'Kill',
+    Default = ab.HitSoundKill,
+    Values = at,
+    Callback = function(xy)
+        ab.HitSoundKill = xy
+        eb('Kill', xy)
+    end,
+})
+bk:AddSlider('HitSoundKillVolume', {
+    Text = 'Kill Volume',
+    Default = ab.HitSoundKillVolume,
+    Min = 0,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(xy)
+        ab.HitSoundKillVolume = xy
+        ee('Kill')
+    end,
+})
+dz()
+local ay_group = ch.Misc:AddLeftGroupbox('Dummy Settings')
+ay_group:AddToggle('AllowDummys', {
+    Text = 'Allow Dummys',
+    Default = ab.AllowDummys,
+    Callback = function(xy)
+        ab.AllowDummys = xy
+        if xy then
+            cg_ScanEntities()
+            cg_WatchEntities()
+        else
+            cg_ClearEntities()
+        end
+    end,
+})
+local bj = ch['Ui']:AddLeftGroupbox('Menu')
+bj:AddButton('Unload', function()
+    bc:Unload()
+end)
+bj:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', {
+    Default = 'RightShift',
+    NoUI = true,
+    Text = 'Menu keybind',
+})
+bj:AddToggle('ShowKeybinds', {
+    Text = 'Show Keybinds',
+    Default = ab.ShowKeybinds,
+    Callback = function(xy)
+        ab.ShowKeybinds = xy
+        bc.KeybindFrame.Visible = xy
+    end,
+})
+bj:AddToggle('ShowWatermark', {
+    Text = 'Show Watermark',
+    Default = ab.ShowWatermark,
+    Callback = function(xy)
+        ab.ShowWatermark = xy
+        bc:SetWatermarkVisibility(xy)
+    end,
+})
+bj:AddToggle('Autoload', {
+    Text = 'Auto Load',
+    Default = ab.Autoload,
+    Callback = function(xy)
+        ab.Autoload = xy
+        if Options and Options.Autoload then
+            pcall(function()
+                Options.Autoload:SetValue(xy)
+            end)
+        end
+        if xy then
+            queue_on_teleport([[
+            			while not game:IsLoaded() do
+            				task.wait(0.1)
+            			end
+            		
+            			loadstring(game:HttpGet("https://api.jnkie.com/api/v1/luascripts/public/6425722615105111f4d87906aa68803e2ab544acdaedb775c13cd11b90ebbcf2/download"))()
+            			]])
+        end
+    end,
+})
+bc.ToggleKeybind = Options.MenuKeybind
+bc.KeybindFrame.Visible = ab.ShowKeybinds
+bc:SetWatermarkVisibility(ab.ShowWatermark)
+if bc.Watermark then
+    bc.Watermark.AnchorPoint = Vector2.new(0, 0.005)
+    bc.Watermark.Position = UDim2.new(0, 0, 0.005, 0)
+end
+ci:SetLibrary(bc)
+bx:SetLibrary(bc)
+bx:IgnoreThemeSettings()
+bx:SetIgnoreIndexes({
+})
+ci:SetFolder('creepcc')
+bx:SetFolder('creepcc/entities')
+bx:BuildConfigSection(ch['Ui'])
+ci:ApplyToTab(ch['Ui'])
+ci:ApplyTheme('Creep')
+bc:OnUnload(function()
+    ce()
+    if cy then
+        cy:Disconnect()
+    end
+    if ao then
+        ao:Disconnect()
+    end
+    if au then
+        au:Disconnect()
+    end
+    for xk in pairs(e) do
+        gr(xk)
+    end
+    if av then
+        av:Destroy()
+    end
+    if cp then
+        cp:Disconnect()
+    end
+    for _, hb in ipairs(cq) do
+        hb:Disconnect()
+    end
+    for qs in pairs(cu) do
+        tw(qs)
+    end
+    if cs then
+        cs:Destroy()
+    end
+    ud()
+    ub()
+    if bh then
+        bh:Disconnect()
+    end
+    if y then
+        y:Disconnect()
+    end
+    if z then
+        z:Disconnect()
+    end
+    if cg_EntitiesConn then
+        cg_EntitiesConn:Disconnect()
+    end
+    if cg_EntitiesChildConn then
+        cg_EntitiesChildConn:Disconnect()
+    end
+    cg_ClearEntities()
+    for qe in pairs(jb) do
+        tv(qe)
+    end
+    if kn and kn.container then
+        kn.container:Destroy()
+    end
+    if xo and xo.container then
+        xo.container:Destroy()
+    end
+    if kp then
+        kp:Destroy()
+    end
+    if jn then
+        jn:Destroy()
+    end
+    bc.Unloaded = true
+    game.CoreGui.dangbroitsloaded:Destroy()
+end)
+bx:LoadAutoloadConfig()
+return function()
+    bc:Unload()
+end
