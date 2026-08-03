@@ -1,0 +1,3728 @@
+local RUN_KEY = "IronFrostSkinChangerUI_v1"
+
+local previous = rawget(_G, RUN_KEY)
+if type(previous) == "table" and type(previous.Cleanup) == "function" then
+    pcall(previous.Cleanup)
+end
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+local Config = {
+    Enabled = true,
+    AutoRefreshOnChange = true,
+    RefreshInterval = 0.85,
+    IncludeNonGuns = true,
+    ToggleKey = Enum.KeyCode.RightShift,
+    CleanupKey = Enum.KeyCode.End,
+}
+
+local State = {
+    Alive = true,
+    Connections = {},
+    Instances = {},
+    Restores = {},
+    Modules = {},
+    Weapons = {},
+    WeaponsById = {},
+    Categories = {},
+    Overrides = {},
+    OverrideEnabled = {},
+    WrapOverrides = {},
+    WrapOverrideEnabled = {},
+    CharmOverrides = {},
+    CharmOverrideEnabled = {},
+    FinisherOverrides = {},
+    FinisherOverrideEnabled = {},
+    ButtonsByWeapon = {},
+    SkinButtons = {},
+    SkinButtonTextColors = {},
+    SkinColorCache = {},
+    IconOriginals = {},
+    WeaponIconIndex = nil,
+    IconPatchCount = 0,
+    WrapFallbackOriginals = {},
+    WrapFallbackRoots = {},
+    WrapFallbackCount = 0,
+    WrapTextureCache = {},
+    WrapColorCache = {},
+    WrapIconCache = {},
+    Wraps = {},
+    Charms = {},
+    Finishers = {},
+    ModeButtons = {},
+    LocalDataOriginals = {},
+    ApplyingLocalDataOverrides = false,
+    PendingBuildSkins = {},
+    PendingRefreshWeapons = {},
+    SelectedWeaponId = nil,
+    SelectedCosmeticType = "skin",
+    SelectedCategory = "Primary",
+    WeaponSearchText = "",
+    CosmeticSearchText = "",
+    NeedsRefresh = false,
+    LastStatus = "loading",
+    LastRefresh = "none",
+    Hooked = false,
+}
+
+_G[RUN_KEY] = State
+
+local function safeRequire(instance)
+    if not instance then
+        return nil
+    end
+    local ok, result = pcall(require, instance)
+    if ok then
+        return result
+    end
+    return nil
+end
+
+local function getPath(root, parts)
+    local cursor = root
+    for _, name in ipairs(parts) do
+        cursor = cursor and cursor:FindFirstChild(name)
+        if not cursor then
+            return nil
+        end
+    end
+    return cursor
+end
+
+local ItemsModule = getPath(ReplicatedStorage, { "Milk", "Directory", "Items" })
+local Items = safeRequire(ItemsModule)
+if type(Items) ~= "table" or type(Items.all) ~= "table" then
+    return false
+end
+
+local Wraps = safeRequire(getPath(ReplicatedStorage, { "Milk", "Directory", "Wraps" })) or {}
+local Charms = safeRequire(getPath(ReplicatedStorage, { "Milk", "Directory", "Charms" })) or {}
+local Finishers = safeRequire(getPath(ReplicatedStorage, { "Milk", "Directory", "Finishers" })) or {}
+
+local function trackConnection(connection)
+    table.insert(State.Connections, connection)
+    return connection
+end
+
+local function trackInstance(instance)
+    table.insert(State.Instances, instance)
+    return instance
+end
+
+local function trackRestore(callback)
+    table.insert(State.Restores, callback)
+    return callback
+end
+
+local function safeGuiParent()
+    if type(gethui) == "function" then
+        local ok, parent = pcall(gethui)
+        if ok and parent then
+            return parent
+        end
+    end
+
+    local playerGui = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if playerGui then
+        return playerGui
+    end
+
+    return CoreGui
+end
+
+local function prettyName(value)
+    value = tostring(value or "")
+    value = value:gsub("_", " ")
+    value = value:gsub("(%a)([%w']*)", function(first, rest)
+        return first:upper() .. rest:lower()
+    end)
+    return value
+end
+
+local function rarityColor(rarity)
+    rarity = tostring(rarity or ""):lower()
+    if rarity == "common" then
+        return Color3.fromRGB(88, 96, 110)
+    elseif rarity == "uncommon" then
+        return Color3.fromRGB(54, 150, 92)
+    elseif rarity == "rare" then
+        return Color3.fromRGB(64, 130, 210)
+    elseif rarity == "epic" then
+        return Color3.fromRGB(155, 86, 215)
+    elseif rarity == "legendary" then
+        return Color3.fromRGB(220, 150, 45)
+    elseif rarity == "mythic" or rarity == "ancient" then
+        return Color3.fromRGB(225, 72, 86)
+    end
+    return Color3.fromRGB(54, 58, 68)
+end
+
+local function colorFromValue(value)
+    if typeof(value) == "Color3" then
+        return value
+    end
+    if typeof(value) == "BrickColor" then
+        return value.Color
+    end
+    if type(value) == "table" then
+        local r = value.r or value.R or value[1]
+        local g = value.g or value.G or value[2]
+        local b = value.b or value.B or value[3]
+        if type(r) == "number" and type(g) == "number" and type(b) == "number" then
+            if r > 1 or g > 1 or b > 1 then
+                return Color3.fromRGB(math.clamp(r, 0, 255), math.clamp(g, 0, 255), math.clamp(b, 0, 255))
+            end
+            return Color3.new(math.clamp(r, 0, 1), math.clamp(g, 0, 1), math.clamp(b, 0, 1))
+        end
+    end
+    return nil
+end
+
+local function getSkinData(weaponId, skinId)
+    local weapon = Items.all[weaponId]
+    if not weapon or type(weapon.skins) ~= "table" then
+        return nil
+    end
+    return weapon.skins[skinId]
+end
+
+local function weaponExists(weaponId)
+    return type(Items.all[tostring(weaponId or "")]) == "table"
+end
+
+local function skinExists(weaponId, skinId)
+    return type(getSkinData(weaponId, skinId)) == "table"
+end
+
+local function skinModelColor(weaponId, skinId, fallback)
+    weaponId = tostring(weaponId)
+    skinId = tostring(skinId)
+
+    local cacheKey = weaponId .. "/" .. skinId
+    local cached = State.SkinColorCache[cacheKey]
+    if cached then
+        return cached
+    end
+
+    local skinData = getSkinData(weaponId, skinId)
+    local color = colorFromValue(skinData and (skinData.color or skinData.Color or skinData.uiColor or skinData.primaryColor))
+        or fallback
+        or rarityColor(skinData and skinData.rarity)
+
+    local assets = getPath(ReplicatedStorage, { "Assets", "Items" })
+    local category = skinData and tostring(skinData.category or "")
+    local itemId = skinData and tostring(skinData.ID or weaponId)
+    local folder = assets and assets:FindFirstChild(category)
+    folder = folder and folder:FindFirstChild(itemId)
+    folder = folder and folder:FindFirstChild(skinId)
+    local model = folder and folder:FindFirstChild("model")
+
+    if model then
+        local totalR = 0
+        local totalG = 0
+        local totalB = 0
+        local totalWeight = 0
+
+        for _, descendant in ipairs(model:GetDescendants()) do
+            if descendant:IsA("BasePart")
+                and descendant.Transparency < 0.9
+                and descendant.Name ~= "Joint"
+                and not descendant.Name:find("IKHandle")
+            then
+                local size = descendant.Size
+                local weight = math.clamp(size.X * size.Y * size.Z, 0.05, 16)
+                totalR += descendant.Color.R * weight
+                totalG += descendant.Color.G * weight
+                totalB += descendant.Color.B * weight
+                totalWeight += weight
+            end
+        end
+
+        if totalWeight > 0 then
+            color = Color3.new(totalR / totalWeight, totalG / totalWeight, totalB / totalWeight)
+        end
+    end
+
+    State.SkinColorCache[cacheKey] = color
+    return color
+end
+
+local function readableTextColor(color)
+    local luminance = color.R * 0.299 + color.G * 0.587 + color.B * 0.114
+    if luminance > 0.58 then
+        return Color3.fromRGB(18, 20, 26)
+    end
+    return Color3.fromRGB(245, 247, 250)
+end
+
+local function chooseSkin(weaponId, fallbackSkin)
+    if not Config.Enabled then
+        return fallbackSkin or "base"
+    end
+    if not State.OverrideEnabled[weaponId] then
+        return fallbackSkin or "base"
+    end
+
+    local wanted = State.Overrides[weaponId]
+    if wanted and skinExists(weaponId, wanted) then
+        return wanted
+    end
+
+    return fallbackSkin or "base"
+end
+
+local function normalizeAssetKey(value)
+    local text = tostring(value or "")
+    local id = text:match("%d+")
+    return id and tostring(id) or nil
+end
+
+local function addWeaponIconKey(index, image, weaponId)
+    local key = normalizeAssetKey(image)
+    if key and key ~= "" then
+        index[key] = tostring(weaponId)
+    end
+end
+
+local function getWeaponIconIndex()
+    if State.WeaponIconIndex then
+        return State.WeaponIconIndex
+    end
+
+    local index = {}
+    for weaponId, weapon in pairs(Items.all) do
+        if type(weapon) == "table" then
+            addWeaponIconKey(index, weapon.icon, weaponId)
+            addWeaponIconKey(index, weapon.flippedIcon, weaponId)
+            if type(weapon.skins) == "table" then
+                for _, skin in pairs(weapon.skins) do
+                    if type(skin) == "table" then
+                        addWeaponIconKey(index, skin.icon, weaponId)
+                        addWeaponIconKey(index, skin.flippedIcon, weaponId)
+                    end
+                end
+            end
+        end
+    end
+
+    State.WeaponIconIndex = index
+    return State.WeaponIconIndex
+end
+
+local function weaponIdFromIconImage(image)
+    local key = normalizeAssetKey(image)
+    return key and getWeaponIconIndex()[key] or nil
+end
+
+local function vector2FromValue(value)
+    if typeof(value) == "Vector2" then
+        return value
+    end
+    if type(value) == "table" then
+        local x = value.X or value.x or value[1]
+        local y = value.Y or value.y or value[2]
+        if type(x) == "number" and type(y) == "number" then
+            return Vector2.new(x, y)
+        end
+    end
+    return nil
+end
+
+local function getSkinIconData(weaponId, skinId, preferFlipped)
+    weaponId = tostring(weaponId or "")
+    skinId = tostring(skinId or "base")
+
+    local weapon = Items.all[weaponId]
+    local skin = getSkinData(weaponId, skinId)
+    if type(weapon) ~= "table" or type(skin) ~= "table" then
+        return nil
+    end
+
+    local icon = nil
+    if preferFlipped then
+        icon = skin.flippedIcon or weapon.flippedIcon or skin.icon or weapon.icon
+    else
+        icon = skin.icon or weapon.icon or skin.flippedIcon or weapon.flippedIcon
+    end
+    if icon == nil or tostring(icon) == "" then
+        return nil
+    end
+
+    return {
+        image = icon,
+        rectOffset = vector2FromValue(skin.iconPos or skin.ImageRectOffset or weapon.iconPos or weapon.ImageRectOffset),
+        rectSize = vector2FromValue(skin.iconSize or skin.ImageRectSize or weapon.iconSize or weapon.ImageRectSize),
+    }
+end
+
+local CosmeticTypeInfo = {
+    skin = {
+        label = "Skin",
+        plural = "Skins",
+        field = "skin",
+        overrides = "Overrides",
+        enabled = "OverrideEnabled",
+    },
+    wrap = {
+        label = "Wrap",
+        plural = "Wraps",
+        field = "wrap",
+        overrides = "WrapOverrides",
+        enabled = "WrapOverrideEnabled",
+    },
+    charm = {
+        label = "Charm",
+        plural = "Charms",
+        field = "charm",
+        overrides = "CharmOverrides",
+        enabled = "CharmOverrideEnabled",
+    },
+    finisher = {
+        label = "Finisher",
+        plural = "Finishers",
+        field = "finisher",
+        overrides = "FinisherOverrides",
+        enabled = "FinisherOverrideEnabled",
+    },
+}
+
+local CosmeticModes = {
+    { id = "skin", label = "Skins" },
+    { id = "wrap", label = "Wraps" },
+    { id = "charm", label = "Charms" },
+}
+
+local function getCosmeticState(cosmeticType)
+    local info = CosmeticTypeInfo[cosmeticType or "skin"] or CosmeticTypeInfo.skin
+    return info, State[info.overrides], State[info.enabled]
+end
+
+local function collectCosmeticList(source)
+    local list = {}
+    if type(source) == "table" then
+        for cosmeticId, cosmetic in pairs(source) do
+            if type(cosmetic) == "table" then
+                table.insert(list, {
+                    id = tostring(cosmeticId),
+                    name = tostring(cosmetic.name or cosmetic.displayName or cosmeticId),
+                    rarity = tostring(cosmetic.rarity or ""),
+                    kind = tostring(cosmetic.kind or ""),
+                    icon = cosmetic.icon,
+                })
+            end
+        end
+    end
+    table.sort(list, function(a, b)
+        local ar = rarityColor(a.rarity)
+        local br = rarityColor(b.rarity)
+        local ap = ar.R + ar.G + ar.B
+        local bp = br.R + br.G + br.B
+        if ap ~= bp then
+            return ap > bp
+        end
+        return a.name:lower() < b.name:lower()
+    end)
+    return list
+end
+
+local function getCosmeticData(cosmeticType, weaponId, cosmeticId)
+    cosmeticId = tostring(cosmeticId or "")
+    if cosmeticId == "" or cosmeticId == "none" then
+        return nil
+    end
+
+    if cosmeticType == "skin" then
+        return getSkinData(weaponId, cosmeticId)
+    elseif cosmeticType == "wrap" then
+        return Wraps[cosmeticId]
+    elseif cosmeticType == "charm" then
+        return Charms[cosmeticId]
+    elseif cosmeticType == "finisher" then
+        return Finishers[cosmeticId]
+    end
+    return nil
+end
+
+local function cosmeticExists(cosmeticType, weaponId, cosmeticId)
+    cosmeticId = tostring(cosmeticId or "")
+    if cosmeticType == "skin" then
+        return skinExists(weaponId, cosmeticId)
+    end
+    if cosmeticId == "none" then
+        return true
+    end
+    return type(getCosmeticData(cosmeticType, weaponId, cosmeticId)) == "table"
+end
+
+local function chooseItemCosmetic(cosmeticType, weaponId, fallbackId)
+    if not Config.Enabled then
+        return fallbackId
+    end
+
+    local _, overrides, enabled = getCosmeticState(cosmeticType)
+    if not enabled[weaponId] then
+        return fallbackId
+    end
+
+    local wanted = overrides[weaponId]
+    if wanted == "none" then
+        return nil
+    end
+    if wanted and cosmeticExists(cosmeticType, weaponId, wanted) then
+        return wanted
+    end
+    return fallbackId
+end
+
+local function currentCosmeticLabel(cosmeticType, weaponId)
+    local info, overrides, enabled = getCosmeticState(cosmeticType)
+    if cosmeticType ~= "skin" and not enabled[weaponId] then
+        return "off"
+    end
+
+    local selected = overrides[weaponId] or (cosmeticType == "skin" and "base" or "none")
+    if selected == "none" then
+        return "None"
+    end
+
+    local data = getCosmeticData(cosmeticType, weaponId, selected)
+    local name = data and (data.name or data.displayName) or selected
+    if cosmeticType == "finisher" and data and data.kind then
+        return tostring(name or selected) .. " [" .. prettyName(data.kind) .. "]"
+    end
+    return tostring(name or selected or info.label)
+end
+
+local function activeCosmeticLabel(weaponId)
+    local info = CosmeticTypeInfo[State.SelectedCosmeticType] or CosmeticTypeInfo.skin
+    return info.label .. ": " .. currentCosmeticLabel(State.SelectedCosmeticType, weaponId)
+end
+
+local function cosmeticButtonColor(cosmeticType, weaponId, cosmeticId, fallback)
+    if cosmeticType == "skin" then
+        return skinModelColor(weaponId, cosmeticId, fallback)
+    end
+
+    local data = getCosmeticData(cosmeticType, weaponId, cosmeticId)
+    return colorFromValue(data and (data.color or data.Color or data.uiColor or data.primaryColor))
+        or rarityColor(data and data.rarity)
+        or fallback
+        or Color3.fromRGB(54, 58, 68)
+end
+
+local function getWeaponDisplay(weaponId)
+    local weapon = Items.all[weaponId]
+    return weapon and (weapon.name or weapon.displayName or weaponId) or tostring(weaponId)
+end
+
+local function currentSkinLabel(weaponId)
+    return currentCosmeticLabel("skin", weaponId)
+end
+
+local function collectWeapons()
+    local categorySet = { All = true }
+    local weapons = {}
+    State.Wraps = collectCosmeticList(Wraps)
+    State.Charms = collectCosmeticList(Charms)
+    State.Finishers = collectCosmeticList(Finishers)
+
+    for weaponId, weapon in pairs(Items.all) do
+        if type(weapon) == "table" and type(weapon.skins) == "table" then
+            local isEquippable = weapon.isEquippable ~= false
+            local hasModel = typeof(weapon.model) == "Instance" or skinExists(weaponId, "base")
+            if isEquippable and hasModel then
+                local skins = {}
+                for skinId, skin in pairs(weapon.skins) do
+                    if type(skin) == "table" then
+                        table.insert(skins, {
+                            id = tostring(skinId),
+                            name = tostring(skin.name or skin.displayName or skinId),
+                            rarity = tostring(skin.rarity or weapon.rarity or ""),
+                            icon = skin.icon or weapon.icon,
+                            flippedIcon = skin.flippedIcon or weapon.flippedIcon,
+                            iconPos = skin.iconPos or weapon.iconPos,
+                            iconSize = skin.iconSize or weapon.iconSize,
+                        })
+                    end
+                end
+
+                table.sort(skins, function(a, b)
+                    if a.id == "base" then
+                        return true
+                    end
+                    if b.id == "base" then
+                        return false
+                    end
+                    return a.name:lower() < b.name:lower()
+                end)
+
+                if #skins > 0 then
+                    local category = tostring(weapon.category or "other")
+                    categorySet[category] = true
+                    table.insert(weapons, {
+                        id = tostring(weaponId),
+                        name = tostring(weapon.name or weapon.displayName or weaponId),
+                        category = category,
+                        slot = tonumber(weapon.slot) or 99,
+                        layoutOrder = tonumber(weapon.layoutOrder) or 999,
+                        rarity = tostring(weapon.rarity or ""),
+                        icon = weapon.icon,
+                        flippedIcon = weapon.flippedIcon,
+                        iconPos = weapon.iconPos,
+                        iconSize = weapon.iconSize,
+                        skins = skins,
+                    })
+                end
+            end
+        end
+    end
+
+    table.sort(weapons, function(a, b)
+        if a.slot ~= b.slot then
+            return a.slot < b.slot
+        end
+        if a.category ~= b.category then
+            return a.category < b.category
+        end
+        if a.layoutOrder ~= b.layoutOrder then
+            return a.layoutOrder < b.layoutOrder
+        end
+        return a.name:lower() < b.name:lower()
+    end)
+
+    local categories = { "All" }
+    for category in pairs(categorySet) do
+        if category ~= "All" then
+            table.insert(categories, category)
+        end
+    end
+    table.sort(categories, function(a, b)
+        if a == "All" then
+            return true
+        end
+        if b == "All" then
+            return false
+        end
+        return a < b
+    end)
+
+    State.Weapons = weapons
+    State.WeaponsById = {}
+    for _, weapon in ipairs(weapons) do
+        State.WeaponsById[weapon.id] = weapon
+        if State.Overrides[weapon.id] == nil then
+            State.Overrides[weapon.id] = "base"
+        end
+        if State.OverrideEnabled[weapon.id] == nil then
+            State.OverrideEnabled[weapon.id] = false
+        end
+        if State.WrapOverrides[weapon.id] == nil then
+            State.WrapOverrides[weapon.id] = "none"
+        end
+        if State.WrapOverrideEnabled[weapon.id] == nil then
+            State.WrapOverrideEnabled[weapon.id] = false
+        end
+        if State.CharmOverrides[weapon.id] == nil then
+            State.CharmOverrides[weapon.id] = "none"
+        end
+        if State.CharmOverrideEnabled[weapon.id] == nil then
+            State.CharmOverrideEnabled[weapon.id] = false
+        end
+        if State.FinisherOverrides[weapon.id] == nil then
+            State.FinisherOverrides[weapon.id] = "none"
+        end
+        if State.FinisherOverrideEnabled[weapon.id] == nil then
+            State.FinisherOverrideEnabled[weapon.id] = false
+        end
+    end
+    State.Categories = categories
+    State.SelectedWeaponId = State.SelectedWeaponId or (weapons[1] and weapons[1].id)
+end
+
+local function loadRenderModules()
+    local weaponECS = getPath(ReplicatedStorage, { "Modules", "WeaponECS" })
+    local render = weaponECS and weaponECS:FindFirstChild("Render")
+    State.Modules.Builder = safeRequire(render and render:FindFirstChild("Builder"))
+    State.Modules.ViewModel = safeRequire(render and render:FindFirstChild("ViewModel"))
+    State.Modules.Registry = safeRequire(render and render:FindFirstChild("Registry"))
+    State.Modules.Teardown = safeRequire(render and render:FindFirstChild("Teardown"))
+    State.Modules.ClientInventory = safeRequire(render and render:FindFirstChild("ClientInventory"))
+    State.Modules.HotbarHUD = safeRequire(render and render:FindFirstChild("HotbarHUD"))
+    State.Modules.ClientState = safeRequire(render and render:FindFirstChild("ClientState"))
+    State.Modules.WeaponLoadoutSync = safeRequire(weaponECS and weaponECS:FindFirstChild("WeaponLoadoutSync"))
+    State.Modules.ItemResolver = safeRequire(weaponECS and weaponECS:FindFirstChild("Resolve") and weaponECS.Resolve:FindFirstChild("ItemResolver"))
+    State.Modules.ClientModule = safeRequire(getPath(ReplicatedFirst, { "Packages", "Chickynoid", "Client", "ClientModule" }))
+    State.Modules.DataHandler = safeRequire(getPath(ReplicatedStorage, { "Modules", "Handlers", "DataHandler" }))
+
+    local ok, neuron = pcall(function()
+        return require(ReplicatedFirst:WaitForChild("neuron", 2))
+    end)
+    if ok then
+        State.Modules.Neuron = neuron
+    end
+end
+
+local function getLocalSimulationState()
+    local clientModule = State.Modules.ClientModule
+    local chickynoid = type(clientModule) == "table" and clientModule.localChickynoid or nil
+    local simulation = chickynoid and chickynoid.simulation
+    local state = simulation and simulation.state
+    if type(state) == "table" then
+        return state
+    end
+    return nil
+end
+
+local function applyClientGunState(weaponId, skinId)
+    local clientState = State.Modules.ClientState
+    local gunStates = type(clientState) == "table" and clientState.gunStates or nil
+    local gunState = type(gunStates) == "table" and gunStates[weaponId] or nil
+    local skinData = getSkinData(weaponId, skinId)
+    if type(gunState) ~= "table" or type(skinData) ~= "table" then
+        return
+    end
+
+    gunState.skin = skinId
+    gunState.data = skinData
+    gunState.stats = skinData.stats
+    gunState.wrap = chooseItemCosmetic("wrap", weaponId, gunState.wrap)
+    gunState.charm = chooseItemCosmetic("charm", weaponId, gunState.charm)
+    gunState.finisher = chooseItemCosmetic("finisher", weaponId, gunState.finisher)
+end
+
+local function makeCosmeticGunState(gunState, weaponId, skinId)
+    local skinData = getSkinData(weaponId, skinId)
+    if type(skinData) ~= "table" then
+        return gunState
+    end
+
+    local clone = {}
+    if type(gunState) == "table" then
+        for key, value in pairs(gunState) do
+            clone[key] = value
+        end
+    end
+
+    clone.skin = skinId
+    clone.data = skinData
+    clone.stats = skinData.stats
+    clone.wrap = chooseItemCosmetic("wrap", weaponId, clone.wrap)
+    clone.charm = chooseItemCosmetic("charm", weaponId, clone.charm)
+    clone.finisher = chooseItemCosmetic("finisher", weaponId, clone.finisher)
+    clone.states = clone.states or { "idle" }
+    if type(clone.getState) ~= "function" then
+        function clone:getState()
+            return self.states and self.states[1] or "idle"
+        end
+    end
+
+    local ammoStats = skinData.stats and skinData.stats.ammo
+    if ammoStats and clone.ammo == nil then
+        clone.ammo = {
+            magCount = ammoStats.magSize or 0,
+            reserveCount = ammoStats.reserveSize or 0,
+        }
+    end
+
+    return clone
+end
+
+local WRAP_FALLBACK_NAME = "__IronFrostWrapFallback"
+local WRAP_FALLBACK_WRAP_ATTR = "__IronFrostWrapFallbackWrap"
+local WRAP_FALLBACK_WEAPON_ATTR = "__IronFrostWrapFallbackWeapon"
+
+local function materialFromValue(value)
+    if typeof(value) == "EnumItem" and value.EnumType == Enum.Material then
+        return value
+    end
+
+    local text = tostring(value or "")
+    text = text:gsub("^Enum%.Material%.", "")
+    if text == "Metallic" then
+        return Enum.Material.Metal
+    elseif text == "LessMetallic" then
+        return Enum.Material.SmoothPlastic
+    end
+
+    local ok, material = pcall(function()
+        return Enum.Material[text]
+    end)
+    if ok then
+        return material
+    end
+    return nil
+end
+
+local function numberFromValue(value)
+    local number = tonumber(value)
+    return number
+end
+
+local function getWrapData(wrapId)
+    wrapId = tostring(wrapId or "")
+    if wrapId == "" or wrapId == "none" then
+        return nil
+    end
+    local data = Wraps[wrapId]
+    return type(data) == "table" and data or nil
+end
+
+local function getWrapTextureList(wrapId)
+    wrapId = tostring(wrapId or "")
+    local cached = State.WrapTextureCache[wrapId]
+    if cached then
+        return cached
+    end
+
+    local wrap = getWrapData(wrapId)
+    local textures = type(wrap) == "table" and wrap.textures or nil
+    if type(textures) ~= "table" then
+        State.WrapTextureCache[wrapId] = {}
+        return State.WrapTextureCache[wrapId]
+    end
+
+    local list = {}
+    for key, texture in pairs(textures) do
+        if type(texture) == "table" then
+            table.insert(list, {
+                order = tonumber(key) or #list + 1,
+                data = texture,
+            })
+        end
+    end
+    table.sort(list, function(a, b)
+        return a.order < b.order
+    end)
+    State.WrapTextureCache[wrapId] = list
+    return list
+end
+
+local function fallbackWrapColor(wrapId)
+    wrapId = tostring(wrapId or "")
+    local cached = State.WrapColorCache[wrapId]
+    if cached then
+        return cached
+    end
+
+    local textures = getWrapTextureList(wrapId)
+    local r = 0
+    local g = 0
+    local b = 0
+    local count = 0
+
+    for _, entry in ipairs(textures) do
+        local data = entry.data
+        local color = colorFromValue(data.partColor or data.color or data.Color)
+        if color then
+            r += color.R
+            g += color.G
+            b += color.B
+            count += 1
+        end
+    end
+
+    if count > 0 then
+        local color = Color3.new(math.clamp(r / count, 0, 1), math.clamp(g / count, 0, 1), math.clamp(b / count, 0, 1))
+        State.WrapColorCache[wrapId] = color
+        return color
+    end
+
+    local hash = 0
+    for index = 1, #tostring(wrapId) do
+        hash = (hash * 33 + string.byte(tostring(wrapId), index)) % 255
+    end
+    local color = Color3.fromHSV(hash / 255, 0.58, 0.92)
+    State.WrapColorCache[wrapId] = color
+    return color
+end
+
+local function rememberWrapPartOriginal(part)
+    if State.WrapFallbackOriginals[part] then
+        return
+    end
+
+    State.WrapFallbackOriginals[part] = {
+        Color = part.Color,
+        Material = part.Material,
+        Transparency = part.Transparency,
+        Reflectance = part.Reflectance,
+    }
+end
+
+local function clearWrapFallbackPart(part)
+    local original = State.WrapFallbackOriginals[part]
+    if type(original) == "table" and part and part.Parent then
+        pcall(function()
+            part.Color = original.Color
+            part.Material = original.Material
+            part.Transparency = original.Transparency
+            part.Reflectance = original.Reflectance
+        end)
+    end
+
+    if part and part.Parent then
+        for _, child in ipairs(part:GetChildren()) do
+            if child.Name == WRAP_FALLBACK_NAME then
+                child:Destroy()
+            end
+        end
+    end
+
+    State.WrapFallbackOriginals[part] = nil
+end
+
+local function clearWrapFallbackRoot(root)
+    if typeof(root) ~= "Instance" then
+        return
+    end
+
+    local parts = {}
+    if root:IsA("BasePart") then
+        table.insert(parts, root)
+    end
+    for _, descendant in ipairs(root:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            table.insert(parts, descendant)
+        end
+    end
+
+    for _, part in ipairs(parts) do
+        clearWrapFallbackPart(part)
+    end
+
+    pcall(function()
+        root:SetAttribute(WRAP_FALLBACK_WRAP_ATTR, nil)
+        root:SetAttribute(WRAP_FALLBACK_WEAPON_ATTR, nil)
+    end)
+    State.WrapFallbackRoots[root] = nil
+end
+
+local function restoreAllWrapFallbacks()
+    for part in pairs(State.WrapFallbackOriginals) do
+        clearWrapFallbackPart(part)
+    end
+    for root in pairs(State.WrapFallbackRoots) do
+        if typeof(root) == "Instance" and root.Parent then
+            pcall(function()
+                root:SetAttribute(WRAP_FALLBACK_WRAP_ATTR, nil)
+                root:SetAttribute(WRAP_FALLBACK_WEAPON_ATTR, nil)
+            end)
+        end
+    end
+    table.clear(State.WrapFallbackOriginals)
+    table.clear(State.WrapFallbackRoots)
+    State.WrapFallbackCount = 0
+end
+
+local function shouldWrapFallbackPart(part)
+    if not part:IsA("BasePart") or part.Transparency >= 0.92 then
+        return false
+    end
+
+    local name = part.Name:lower()
+    if name == "left arm"
+        or name == "right arm"
+        or name == "left hand"
+        or name == "right hand"
+        or name:find("joint", 1, true)
+        or name:find("ikhandle", 1, true)
+        or name:find("placement", 1, true)
+        or name:find("vfx", 1, true)
+        or name:find("trail", 1, true)
+        or name:find("impact", 1, true)
+        or name:find("sound", 1, true)
+    then
+        return false
+    end
+
+    return true
+end
+
+local function textureMatchesGroup(texture, group)
+    local textureGroup = tostring(texture.group or "all"):lower()
+    return textureGroup == "all" or textureGroup == tostring(group)
+end
+
+local function addWrapTexture(part, texture)
+    local assetId = texture.ID or texture.id or texture.texture or texture.Texture
+    if assetId == nil or tostring(assetId) == "" then
+        return 0
+    end
+
+    local added = 0
+    local color = colorFromValue(texture.color or texture.Color) or Color3.new(1, 1, 1)
+    local transparency = numberFromValue(texture.transparency) or 0.2
+    local studs = numberFromValue(texture.studsPerTile) or 1
+    local zIndex = numberFromValue(texture.zIndex) or 1
+
+    for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
+        local overlay = Instance.new("Texture")
+        overlay.Name = WRAP_FALLBACK_NAME
+        overlay.Texture = tostring(assetId)
+        overlay.Face = face
+        overlay.Color3 = color
+        overlay.Transparency = math.clamp(transparency, 0, 1)
+        overlay.StudsPerTileU = math.clamp(studs, 0.05, 12)
+        overlay.StudsPerTileV = math.clamp(studs, 0.05, 12)
+        overlay.ZIndex = math.clamp(zIndex, 1, 10)
+        overlay.Parent = part
+        added += 1
+    end
+
+    return added
+end
+
+local function applyWrapFallbackPart(part, wrapId, group)
+    rememberWrapPartOriginal(part)
+
+    local original = State.WrapFallbackOriginals[part]
+    if type(original) == "table" then
+        part.Color = original.Color
+        part.Material = original.Material
+        part.Transparency = original.Transparency
+        part.Reflectance = original.Reflectance
+    end
+
+    for _, child in ipairs(part:GetChildren()) do
+        if child.Name == WRAP_FALLBACK_NAME then
+            child:Destroy()
+        end
+    end
+
+    local applied = 0
+    local fallbackColor = fallbackWrapColor(wrapId)
+    local hasColorInstruction = false
+
+    for _, entry in ipairs(getWrapTextureList(wrapId)) do
+        local texture = entry.data
+        if textureMatchesGroup(texture, group) then
+            local material = materialFromValue(texture.baseMaterial or texture.material)
+            if material then
+                part.Material = material
+                applied += 1
+            end
+
+            local partColor = colorFromValue(texture.partColor)
+            if partColor then
+                part.Color = partColor
+                hasColorInstruction = true
+                applied += 1
+            end
+
+            local transparency = numberFromValue(texture.partTransparency)
+            if transparency then
+                part.Transparency = math.clamp(transparency, 0, 1)
+                applied += 1
+            end
+
+            local reflectance = numberFromValue(texture.partReflectance)
+            if reflectance then
+                part.Reflectance = math.clamp(reflectance, 0, 1)
+                applied += 1
+            end
+
+            applied += addWrapTexture(part, texture)
+        end
+    end
+
+    if not hasColorInstruction then
+        part.Color = part.Color:Lerp(fallbackColor, 0.7)
+        applied += 1
+    end
+
+    return applied > 0
+end
+
+local function applyWrapFallbackRoot(root, weaponId)
+    if typeof(root) ~= "Instance" or root:IsDescendantOf(ReplicatedStorage) then
+        return 0
+    end
+
+    local weaponModel = root:FindFirstChild("model")
+    if weaponModel and (root.Name == "ViewModel" or root:FindFirstChild("Left Arm") or root:FindFirstChild("Right Arm")) then
+        root = weaponModel
+    end
+
+    weaponId = tostring(weaponId or "")
+    local wrapId = chooseItemCosmetic("wrap", weaponId, nil)
+
+    if wrapId
+        and root:GetAttribute(WRAP_FALLBACK_WRAP_ATTR) == tostring(wrapId)
+        and root:GetAttribute(WRAP_FALLBACK_WEAPON_ATTR) == weaponId
+    then
+        return 0
+    end
+
+    clearWrapFallbackRoot(root)
+    if not wrapId or not getWrapData(wrapId) then
+        return 0
+    end
+
+    local parts = {}
+    if root:IsA("BasePart") and shouldWrapFallbackPart(root) then
+        table.insert(parts, root)
+    end
+    for _, descendant in ipairs(root:GetDescendants()) do
+        if descendant:IsA("BasePart") and shouldWrapFallbackPart(descendant) then
+            table.insert(parts, descendant)
+        end
+    end
+
+    local applied = 0
+    for index, part in ipairs(parts) do
+        local group = tostring(part:GetAttribute("WrapGroup") or part:GetAttribute("group") or (((index % 2) == 0) and "2" or "1"))
+        if applyWrapFallbackPart(part, wrapId, group) then
+            applied += 1
+        end
+    end
+
+    if applied > 0 then
+        pcall(function()
+            root:SetAttribute(WRAP_FALLBACK_WRAP_ATTR, tostring(wrapId))
+            root:SetAttribute(WRAP_FALLBACK_WEAPON_ATTR, weaponId)
+        end)
+        State.WrapFallbackRoots[root] = true
+    end
+
+    return applied
+end
+
+local function applyWrapFallbackToController(controller, weaponId)
+    if type(controller) ~= "table" then
+        return 0
+    end
+
+    local applied = 0
+    local seen = {}
+    local function applyRoot(root)
+        if typeof(root) == "Instance" and not seen[root] then
+            seen[root] = true
+            applied += applyWrapFallbackRoot(root, weaponId)
+        end
+    end
+
+    for _, field in ipairs({ "viewModel", "viewmodel", "model", "instance", "root", "weaponModel", "characterModel" }) do
+        applyRoot(controller[field])
+    end
+
+    if type(controller.gunState) == "table" then
+        applyRoot(controller.gunState.model)
+        applyRoot(controller.gunState.instance)
+    end
+
+    for _, value in pairs(controller) do
+        if typeof(value) == "Instance" then
+            applyRoot(value)
+        end
+    end
+
+    return applied
+end
+
+local function getPendingBuild(weaponId, requestedSkin)
+    local pending = State.PendingBuildSkins[tostring(weaponId)]
+    if type(pending) ~= "table" then
+        return nil
+    end
+    if requestedSkin and pending.triggerSkin ~= tostring(requestedSkin) then
+        return nil
+    end
+    return pending
+end
+
+local function pickTriggerSkin(weaponId, realSkin, desiredSkin)
+    if desiredSkin ~= realSkin and skinExists(weaponId, desiredSkin) then
+        return desiredSkin
+    end
+
+    local weapon = Items.all[weaponId]
+    if type(weapon) == "table" and type(weapon.skins) == "table" then
+        local preferred = State.Overrides[weaponId]
+        if preferred and preferred ~= realSkin and skinExists(weaponId, preferred) then
+            return preferred
+        end
+        for skinId in pairs(weapon.skins) do
+            skinId = tostring(skinId)
+            if skinId ~= realSkin then
+                return skinId
+            end
+        end
+    end
+
+    return desiredSkin
+end
+
+local function markWeaponForRefresh(weaponId)
+    weaponId = tostring(weaponId or "")
+    if weaponId == "" then
+        return
+    end
+    State.PendingRefreshWeapons[weaponId] = true
+end
+
+local function markAllWeaponsForRefresh()
+    for _, weapon in ipairs(State.Weapons) do
+        markWeaponForRefresh(weapon.id)
+    end
+end
+
+local function getEquippedWeaponId(state)
+    if type(state) ~= "table" then
+        return nil
+    end
+
+    local equippedSlot = tonumber(state.equippedSlot)
+    if not equippedSlot or equippedSlot < 1 or equippedSlot > 4 then
+        return nil
+    end
+
+    local weaponId = state["slot" .. tostring(equippedSlot) .. "_weaponID"]
+    if weaponId and weaponId ~= "" then
+        return tostring(weaponId)
+    end
+    return nil
+end
+
+local function getRealSlotSkin(state, prefix, weaponId)
+    local currentSkin = tostring(state[prefix .. "_skin"] or "base")
+    local pending = State.PendingBuildSkins[tostring(weaponId)]
+    if type(pending) == "table"
+        and pending.prefix == prefix
+        and tostring(pending.triggerSkin or "") == currentSkin
+    then
+        return tostring(pending.realSkin or currentSkin)
+    end
+    return currentSkin
+end
+
+local DataCosmeticTypes = { "wrap", "charm", "finisher" }
+
+local function getWeaponNID(weaponId)
+    local weapon = Items.all[tostring(weaponId)]
+    if type(weapon) ~= "table" or weapon.nID == nil then
+        return nil
+    end
+    return weapon.nID
+end
+
+local function getLocalData()
+    local dataHandler = State.Modules.DataHandler
+    if type(dataHandler) ~= "table" or type(dataHandler.GetDataAsync) ~= "function" or not LocalPlayer then
+        return nil
+    end
+
+    local ok, data = pcall(function()
+        return dataHandler:GetDataAsync(LocalPlayer)
+    end)
+    if ok and type(data) == "table" then
+        return data
+    end
+    return nil
+end
+
+local function ensureOriginalItemRecord(nidKey, itemKey, row, rowExisted)
+    local original = State.LocalDataOriginals[nidKey]
+    if type(original) ~= "table" then
+        original = {
+            fields = {},
+            rowExisted = rowExisted == true,
+            key = itemKey,
+            createdRow = rowExisted and nil or row,
+        }
+        State.LocalDataOriginals[nidKey] = original
+    else
+        original.key = original.key or itemKey
+        if original.createdRow == nil and original.rowExisted == false then
+            original.createdRow = row
+        end
+    end
+    return original
+end
+
+local function getLocalItemRow(data, weaponId, create)
+    local nid = getWeaponNID(weaponId)
+    if nid == nil or type(data) ~= "table" then
+        return nil
+    end
+
+    if type(data.Items) ~= "table" then
+        if not create then
+            return nil
+        end
+        data.Items = {}
+    end
+
+    local itemKey = nid
+    local row = data.Items[itemKey]
+    if type(row) ~= "table" then
+        local stringKey = tostring(nid)
+        if stringKey ~= itemKey and type(data.Items[stringKey]) == "table" then
+            itemKey = stringKey
+            row = data.Items[itemKey]
+        end
+    end
+
+    local rowExisted = type(row) == "table"
+    if not rowExisted then
+        if not create then
+            return nil
+        end
+        row = {}
+        itemKey = nid
+        data.Items[itemKey] = row
+    end
+
+    local nidKey = tostring(nid)
+    ensureOriginalItemRecord(nidKey, itemKey, row, rowExisted)
+    return row, nidKey
+end
+
+local function rememberLocalItemField(nidKey, row, field)
+    local original = State.LocalDataOriginals[nidKey]
+    if type(original) ~= "table" then
+        return
+    end
+    if original.fields[field] == nil then
+        original.fields[field] = {
+            exists = row[field] ~= nil,
+            value = row[field],
+        }
+    end
+end
+
+local function setLocalItemField(data, weaponId, field, value)
+    local row, nidKey = getLocalItemRow(data, weaponId, true)
+    if type(row) ~= "table" or not nidKey then
+        return false
+    end
+    rememberLocalItemField(nidKey, row, field)
+    row[field] = value
+    return true
+end
+
+local function restoreLocalItemField(data, weaponId, field)
+    local nid = getWeaponNID(weaponId)
+    local nidKey = nid and tostring(nid) or nil
+    local original = nidKey and State.LocalDataOriginals[nidKey] or nil
+    if type(original) ~= "table" then
+        return false
+    end
+
+    local row = nil
+    if type(data) == "table" and type(data.Items) == "table" then
+        row = data.Items[original.key] or data.Items[nid] or data.Items[nidKey] or original.createdRow
+    end
+    local saved = original.fields[field]
+    if type(row) ~= "table" or type(saved) ~= "table" then
+        return false
+    end
+
+    if saved.exists then
+        row[field] = saved.value
+    else
+        row[field] = nil
+    end
+    return true
+end
+
+local function applyLocalDataOverrides(data)
+    if State.ApplyingLocalDataOverrides then
+        return
+    end
+    data = data or getLocalData()
+    if type(data) ~= "table" then
+        return
+    end
+
+    State.ApplyingLocalDataOverrides = true
+    pcall(function()
+        for _, weapon in ipairs(State.Weapons) do
+            local weaponId = weapon.id
+            for _, cosmeticType in ipairs(DataCosmeticTypes) do
+                local info, _, enabled = getCosmeticState(cosmeticType)
+                if enabled[weaponId] then
+                    setLocalItemField(data, weaponId, info.field, chooseItemCosmetic(cosmeticType, weaponId, nil))
+                else
+                    restoreLocalItemField(data, weaponId, info.field)
+                end
+            end
+        end
+    end)
+    State.ApplyingLocalDataOverrides = false
+end
+
+local function restoreAllLocalDataOverrides()
+    local data = getLocalData()
+    if type(data) ~= "table" or type(data.Items) ~= "table" then
+        return
+    end
+
+    for nidKey, original in pairs(State.LocalDataOriginals) do
+        if type(original) == "table" then
+            local row = data.Items[original.key] or data.Items[nidKey] or data.Items[tonumber(nidKey)] or original.createdRow
+            if type(row) == "table" and type(original.fields) == "table" then
+                for field, saved in pairs(original.fields) do
+                    if type(saved) == "table" then
+                        if saved.exists then
+                            row[field] = saved.value
+                        else
+                            row[field] = nil
+                        end
+                    end
+                end
+            end
+
+            if original.rowExisted == false and original.createdRow ~= nil then
+                if data.Items[original.key] == original.createdRow then
+                    data.Items[original.key] = nil
+                end
+                if data.Items[nidKey] == original.createdRow then
+                    data.Items[nidKey] = nil
+                end
+                local numericKey = tonumber(nidKey)
+                if numericKey and data.Items[numericKey] == original.createdRow then
+                    data.Items[numericKey] = nil
+                end
+            end
+        end
+    end
+
+    table.clear(State.LocalDataOriginals)
+end
+
+local function hasEnabledCosmeticOverride(weaponId)
+    weaponId = tostring(weaponId)
+    for cosmeticType in pairs(CosmeticTypeInfo) do
+        local _, _, enabled = getCosmeticState(cosmeticType)
+        if enabled[weaponId] then
+            return true
+        end
+    end
+    return false
+end
+
+local function hasEnabledSkinIconOverride()
+    if next(State.IconOriginals) ~= nil then
+        return true
+    end
+
+    for weaponId, enabled in pairs(State.OverrideEnabled) do
+        if enabled and State.Overrides[weaponId] and State.Overrides[weaponId] ~= "base" then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function restorePatchedIcon(gui)
+    local original = State.IconOriginals[gui]
+    if type(original) ~= "table" then
+        return false
+    end
+
+    local ok = pcall(function()
+        if gui and gui.Parent then
+            gui.Image = original.image
+            gui.ImageRectOffset = original.rectOffset
+            gui.ImageRectSize = original.rectSize
+        end
+    end)
+    State.IconOriginals[gui] = nil
+    return ok
+end
+
+local function restoreAllPatchedIcons()
+    for gui in pairs(State.IconOriginals) do
+        restorePatchedIcon(gui)
+    end
+    table.clear(State.IconOriginals)
+    State.IconPatchCount = 0
+end
+
+local function rememberIconOriginal(gui, weaponId, originalIconData)
+    if State.IconOriginals[gui] then
+        return
+    end
+
+    State.IconOriginals[gui] = {
+        weaponId = tostring(weaponId),
+        image = originalIconData and originalIconData.image or gui.Image,
+        rectOffset = originalIconData and (originalIconData.rectOffset or Vector2.new(0, 0)) or gui.ImageRectOffset,
+        rectSize = originalIconData and (originalIconData.rectSize or Vector2.new(0, 0)) or gui.ImageRectSize,
+    }
+end
+
+local function isActiveSlotIconPath(fullName)
+    return fullName:find("gameplay.hud.bottomright.slots", 1, true) ~= nil
+        or fullName:find("mobile.mobile.slot", 1, true) ~= nil
+end
+
+local function isWeaponIconLike(gui)
+    local name = gui.Name:lower()
+    return name == "render"
+        or name:find("weapon", 1, true) ~= nil
+        or name:find("gun", 1, true) ~= nil
+        or name:find("display", 1, true) ~= nil
+end
+
+local function slotNumberFromGui(gui)
+    local cursor = gui
+    while cursor do
+        local name = cursor.Name:lower()
+        local slot = name:match("weaponslot[_%-]?(%d+)")
+            or name:match("slot[_%-]?(%d+)")
+        slot = tonumber(slot)
+        if slot and slot >= 1 and slot <= 4 then
+            return slot
+        end
+        cursor = cursor.Parent
+    end
+    return nil
+end
+
+local function getSlotWeaponAndSkin(gui)
+    if not isWeaponIconLike(gui) then
+        return nil, nil, nil
+    end
+
+    local slot = slotNumberFromGui(gui)
+    if not slot then
+        return nil, nil, nil
+    end
+
+    local prefix = "slot" .. tostring(slot)
+    local state = getLocalSimulationState()
+    local weaponId = type(state) == "table" and state[prefix .. "_weaponID"] or nil
+    local skinId = type(state) == "table" and state[prefix .. "_skin"] or nil
+
+    if (weaponId == nil or weaponId == "") then
+        local clientState = State.Modules.ClientState
+        local inventory = type(clientState) == "table" and clientState.inventory or nil
+        weaponId = type(inventory) == "table" and inventory[slot] or nil
+        local gunState = weaponId and type(clientState.gunStates) == "table" and clientState.gunStates[tostring(weaponId)] or nil
+        skinId = type(gunState) == "table" and gunState.skin or skinId
+    end
+
+    if weaponId == nil or weaponId == "" or not weaponExists(weaponId) then
+        return slot, nil, nil
+    end
+
+    return slot, tostring(weaponId), tostring(skinId or "base")
+end
+
+local function shouldPatchPlayerGuiIcon(gui)
+    if not (gui:IsA("ImageLabel") or gui:IsA("ImageButton")) then
+        return false
+    end
+    if State.Gui and gui:IsDescendantOf(State.Gui) then
+        return false
+    end
+
+    local fullName = gui:GetFullName():lower()
+    if isActiveSlotIconPath(fullName) then
+        return false
+    end
+
+    if fullName:find("gameplay.weaponselection.selection.carousel", 1, true) then
+        return isWeaponIconLike(gui)
+    end
+
+    if fullName:find(".shop", 1, true)
+        and not fullName:find("armory", 1, true)
+        and not fullName:find("loadout", 1, true)
+    then
+        return false
+    end
+
+    for _, token in ipairs({
+        "armory",
+        "loadout",
+        "inventory",
+        "hotbar",
+        "weapon",
+        "weapons",
+        "gun",
+        "slot",
+        "equip",
+        "select",
+    }) do
+        if fullName:find(token, 1, true) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function weaponIdFromGuiContext(gui)
+    local _, slotWeaponId = getSlotWeaponAndSkin(gui)
+    if slotWeaponId then
+        return slotWeaponId
+    end
+
+    local original = State.IconOriginals[gui]
+    if type(original) == "table" and weaponExists(original.weaponId) then
+        return tostring(original.weaponId)
+    end
+
+    local imageWeaponId = weaponIdFromIconImage(gui.Image)
+    if imageWeaponId and weaponExists(imageWeaponId) then
+        return tostring(imageWeaponId)
+    end
+
+    local guiName = gui.Name:lower()
+    local allowContextFallback = guiName:find("render", 1, true)
+        or guiName:find("weapon", 1, true)
+        or guiName:find("gun", 1, true)
+        or guiName:find("display", 1, true)
+    if not allowContextFallback then
+        return nil
+    end
+
+    local cursor = gui
+    while cursor do
+        if weaponExists(cursor.Name) then
+            return tostring(cursor.Name)
+        end
+
+        for _, attributeName in ipairs({ "WeaponId", "weaponId", "WeaponID", "weaponID", "ItemId", "itemId", "ItemID", "itemID", "ID", "Id", "id" }) do
+            local ok, value = pcall(function()
+                return cursor:GetAttribute(attributeName)
+            end)
+            if ok and value ~= nil and weaponExists(value) then
+                return tostring(value)
+            end
+        end
+
+        cursor = cursor.Parent
+    end
+
+    return nil
+end
+
+local function hideDesktopMobileSlotGhosts()
+    if UserInputService.TouchEnabled then
+        return 0
+    end
+
+    local playerGui = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    local mobile = playerGui and playerGui:FindFirstChild("Mobile")
+    mobile = mobile and mobile:FindFirstChild("Mobile")
+    if not mobile then
+        return 0
+    end
+
+    local hidden = 0
+    for _, child in ipairs(mobile:GetChildren()) do
+        local lower = child.Name:lower()
+        if child:IsA("GuiObject") and lower:match("^slot[_%-]?%d+$") and child.Visible then
+            child.Visible = false
+            hidden += 1
+        end
+    end
+    return hidden
+end
+
+local function applySkinIcon(gui, weaponId, skinId, originalSkinId)
+    local original = State.IconOriginals[gui]
+    local preferFlipped = false
+    if type(original) == "table" then
+        local weapon = Items.all[tostring(weaponId)]
+        preferFlipped = normalizeAssetKey(original.image) == normalizeAssetKey(weapon and weapon.flippedIcon)
+    end
+
+    local iconData = getSkinIconData(weaponId, skinId, preferFlipped)
+    if type(iconData) ~= "table" then
+        return false
+    end
+
+    local originalIconData = originalSkinId and getSkinIconData(weaponId, originalSkinId, preferFlipped) or nil
+    rememberIconOriginal(gui, weaponId, originalIconData)
+    gui.Image = iconData.image
+    gui.ImageRectOffset = iconData.rectOffset or Vector2.new(0, 0)
+    gui.ImageRectSize = iconData.rectSize or Vector2.new(0, 0)
+    return true
+end
+
+local function repaintWeaponSelectIcons()
+    local playerGui = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then
+        return 0
+    end
+
+    for gui in pairs(State.IconOriginals) do
+        if not gui or not gui.Parent then
+            State.IconOriginals[gui] = nil
+        elseif isActiveSlotIconPath(gui:GetFullName():lower()) then
+            restorePatchedIcon(gui)
+        end
+    end
+
+    hideDesktopMobileSlotGhosts()
+
+    local patched = 0
+    for _, gui in ipairs(playerGui:GetDescendants()) do
+        if shouldPatchPlayerGuiIcon(gui) then
+            local _, slotWeaponId, slotSkinId = getSlotWeaponAndSkin(gui)
+            local weaponId = slotWeaponId or weaponIdFromGuiContext(gui)
+            if weaponId then
+                local enabled = State.OverrideEnabled[weaponId] == true
+                local wantedSkin = State.Overrides[weaponId]
+                if slotWeaponId then
+                    local realSkin = slotSkinId or "base"
+                    local desiredSkin = Config.Enabled and chooseSkin(weaponId, realSkin) or realSkin
+                    if Config.Enabled and enabled and desiredSkin ~= realSkin and skinExists(weaponId, desiredSkin) and applySkinIcon(gui, weaponId, desiredSkin, realSkin) then
+                        patched += 1
+                    else
+                        restorePatchedIcon(gui)
+                    end
+                elseif Config.Enabled and enabled and wantedSkin and skinExists(weaponId, wantedSkin) then
+                    if applySkinIcon(gui, weaponId, wantedSkin) then
+                        patched += 1
+                    end
+                else
+                    restorePatchedIcon(gui)
+                end
+            end
+        end
+    end
+
+    State.IconPatchCount = patched
+    return patched
+end
+
+local function collectRefreshWeapons()
+    local weapons = {}
+    for weaponId in pairs(State.PendingRefreshWeapons) do
+        weapons[tostring(weaponId)] = true
+        State.PendingRefreshWeapons[weaponId] = nil
+    end
+
+    if next(weapons) ~= nil then
+        return weapons
+    end
+
+    local clientState = State.Modules.ClientState
+    local inventory = type(clientState) == "table" and clientState.inventory or nil
+    if type(inventory) == "table" then
+        for _, weaponId in ipairs(inventory) do
+            weaponId = tostring(weaponId)
+            if hasEnabledCosmeticOverride(weaponId) or weaponId == State.SelectedWeaponId then
+                weapons[weaponId] = true
+            end
+        end
+    end
+
+    if State.SelectedWeaponId then
+        weapons[tostring(State.SelectedWeaponId)] = true
+    end
+
+    return weapons
+end
+
+local function requestActiveSkinRebuild(weaponId)
+    local state = getLocalSimulationState()
+    if type(state) ~= "table" then
+        return false
+    end
+
+    local equippedSlot = tonumber(state.equippedSlot)
+    if not equippedSlot or equippedSlot < 1 or equippedSlot > 4 then
+        return false
+    end
+
+    local prefix = "slot" .. tostring(equippedSlot)
+    if tostring(state[prefix .. "_weaponID"] or "") ~= tostring(weaponId) then
+        return false
+    end
+
+    weaponId = tostring(weaponId)
+    local realSkin = tostring(state[prefix .. "_skin"] or "base")
+    local desiredSkin = chooseSkin(weaponId, realSkin)
+    if not skinExists(weaponId, desiredSkin) then
+        return false
+    end
+
+    local triggerSkin = pickTriggerSkin(weaponId, realSkin, desiredSkin)
+    if not triggerSkin or not skinExists(weaponId, triggerSkin) then
+        return false
+    end
+
+    State.PendingBuildSkins[weaponId] = {
+        buildSkin = desiredSkin,
+        realSkin = realSkin,
+        triggerSkin = triggerSkin,
+        prefix = prefix,
+    }
+
+    state[prefix .. "_skin"] = triggerSkin
+    applyClientGunState(weaponId, desiredSkin)
+
+    task.delay(1, function()
+        local pending = State.PendingBuildSkins[weaponId]
+        if pending and pending.realSkin == realSkin and pending.triggerSkin == triggerSkin then
+            local currentState = getLocalSimulationState()
+            if type(currentState) == "table"
+                and tostring(currentState[prefix .. "_weaponID"] or "") == weaponId
+                and tostring(currentState[prefix .. "_skin"] or "base") == triggerSkin
+            then
+                currentState[prefix .. "_skin"] = realSkin
+            end
+            State.PendingBuildSkins[weaponId] = nil
+        end
+    end)
+
+    return true
+end
+
+local function consumePendingBuild(weaponId, pending)
+    if type(pending) ~= "table" then
+        return
+    end
+
+    local prefix = pending.prefix
+    local state = getLocalSimulationState()
+    if type(state) == "table" and prefix then
+        if tostring(state[prefix .. "_weaponID"] or "") == tostring(weaponId)
+            and tostring(state[prefix .. "_skin"] or "base") == pending.triggerSkin
+        then
+            state[prefix .. "_skin"] = pending.realSkin
+        end
+    end
+
+    if State.PendingBuildSkins[tostring(weaponId)] == pending then
+        State.PendingBuildSkins[tostring(weaponId)] = nil
+    end
+end
+
+local function applyClientStateOverrides(state)
+    if type(state) == "table" then
+        for slot = 1, 4 do
+            local prefix = "slot" .. tostring(slot)
+            local weaponId = state[prefix .. "_weaponID"]
+            if weaponId and weaponId ~= "" then
+                weaponId = tostring(weaponId)
+                local currentSkin = getRealSlotSkin(state, prefix, weaponId)
+                local chosenSkin = chooseSkin(weaponId, currentSkin)
+                applyClientGunState(weaponId, chosenSkin)
+            end
+        end
+        return
+    end
+
+    local realSkins = {}
+    local localState = getLocalSimulationState()
+    if type(localState) == "table" then
+        for slot = 1, 4 do
+            local prefix = "slot" .. tostring(slot)
+            local weaponId = localState[prefix .. "_weaponID"]
+            if weaponId and weaponId ~= "" then
+                realSkins[tostring(weaponId)] = getRealSlotSkin(localState, prefix, weaponId)
+            end
+        end
+    end
+
+    local clientState = State.Modules.ClientState
+    local inventory = type(clientState) == "table" and clientState.inventory or nil
+    if type(inventory) ~= "table" then
+        return
+    end
+
+    for _, weaponId in ipairs(inventory) do
+        weaponId = tostring(weaponId)
+        local gunState = clientState.gunStates and clientState.gunStates[weaponId]
+        local currentSkin = realSkins[weaponId] or (gunState and tostring(gunState.skin or "base")) or "base"
+        applyClientGunState(weaponId, chooseSkin(weaponId, currentSkin))
+    end
+end
+
+local function installHooks()
+    if State.Hooked then
+        return
+    end
+    State.Hooked = true
+    loadRenderModules()
+
+    local dataHandler = State.Modules.DataHandler
+    if type(dataHandler) == "table" and type(dataHandler.GetDataAsync) == "function" then
+        local oldGetDataAsync = dataHandler.GetDataAsync
+        dataHandler.GetDataAsync = function(self, player, ...)
+            local data = oldGetDataAsync(self, player, ...)
+            if player == nil or player == LocalPlayer or player == (LocalPlayer and LocalPlayer.Character) then
+                applyLocalDataOverrides(data)
+            end
+            return data
+        end
+        trackRestore(function()
+            if dataHandler.GetDataAsync ~= oldGetDataAsync then
+                dataHandler.GetDataAsync = oldGetDataAsync
+            end
+        end)
+    end
+
+    local builder = State.Modules.Builder
+    if type(builder) == "table" and type(builder.build) == "function" then
+        local oldBuild = builder.build
+        builder.build = function(character, slot, weaponId, skinId, isLocal, isSimulated)
+            local weaponKey = tostring(weaponId)
+            local requestedSkin = tostring(skinId or "base")
+            local pending = getPendingBuild(weaponKey, requestedSkin)
+            local buildSkin = pending and pending.buildSkin or chooseSkin(weaponKey, requestedSkin)
+            local realSkin = pending and pending.realSkin or requestedSkin
+            local controller = oldBuild(character, slot, weaponId, buildSkin, isLocal, isSimulated)
+            if type(controller) == "table" and buildSkin ~= realSkin then
+                controller.cosmeticSkin = buildSkin
+                controller.skin = realSkin
+            end
+            if type(controller) == "table" then
+                applyWrapFallbackToController(controller, weaponKey)
+            end
+            if pending and type(controller) == "table" then
+                consumePendingBuild(weaponKey, pending)
+            end
+            return controller
+        end
+        trackRestore(function()
+            if builder.build ~= oldBuild then
+                builder.build = oldBuild
+            end
+        end)
+    end
+
+    local viewModel = State.Modules.ViewModel
+    if type(viewModel) == "table" and type(viewModel.new) == "function" then
+        local oldNew = viewModel.new
+        viewModel.new = function(weaponId, skinId, character, isLocal, crosshair, gunState, isSimulated, slot)
+            local weaponKey = tostring(weaponId)
+            local requestedSkin = tostring(skinId or "base")
+            local pending = getPendingBuild(weaponKey, requestedSkin)
+            local buildSkin = pending and pending.buildSkin or chooseSkin(weaponKey, requestedSkin)
+            local realSkin = pending and pending.realSkin or requestedSkin
+            local cosmeticGunState = makeCosmeticGunState(gunState, weaponKey, buildSkin)
+            local controller = oldNew(weaponId, buildSkin, character, isLocal, crosshair, cosmeticGunState, isSimulated, slot)
+            if type(controller) == "table" then
+                controller.gunState = cosmeticGunState
+                applyWrapFallbackToController(controller, weaponKey)
+                if buildSkin ~= realSkin then
+                    controller.cosmeticSkin = buildSkin
+                    controller.skin = realSkin
+                end
+                if pending then
+                    consumePendingBuild(weaponKey, pending)
+                end
+            end
+            return controller
+        end
+        trackRestore(function()
+            if viewModel.new ~= oldNew then
+                viewModel.new = oldNew
+            end
+        end)
+    end
+
+    local resolver = State.Modules.ItemResolver
+    if type(resolver) == "table" then
+        if type(resolver.get) == "function" then
+            local oldGet = resolver.get
+            resolver.get = function(weaponId, skinId)
+                return oldGet(weaponId, chooseSkin(tostring(weaponId), tostring(skinId or "base")))
+            end
+            trackRestore(function()
+                if resolver.get ~= oldGet then
+                    resolver.get = oldGet
+                end
+            end)
+        end
+
+        if type(resolver.getBySlot) == "function" then
+            local oldGetBySlot = resolver.getBySlot
+            resolver.getBySlot = function(state, slot)
+                if type(state) == "table" and tonumber(slot) then
+                    local weaponId = state["slot" .. tostring(slot) .. "_weaponID"]
+                    local skinId = state["slot" .. tostring(slot) .. "_skin"] or "base"
+                    if weaponId and weaponId ~= "" and type(resolver.get) == "function" then
+                        return resolver.get(weaponId, chooseSkin(tostring(weaponId), tostring(skinId)))
+                    end
+                end
+                return oldGetBySlot(state, slot)
+            end
+            trackRestore(function()
+                if resolver.getBySlot ~= oldGetBySlot then
+                    resolver.getBySlot = oldGetBySlot
+                end
+            end)
+        end
+    end
+
+    local clientInventory = State.Modules.ClientInventory
+    if type(clientInventory) == "table" and type(clientInventory.addToInventory) == "function" then
+        local oldAdd = clientInventory.addToInventory
+        clientInventory.addToInventory = function(player, weaponId, skinId, ...)
+            return oldAdd(player, weaponId, chooseSkin(tostring(weaponId), tostring(skinId or "base")), ...)
+        end
+        trackRestore(function()
+            if clientInventory.addToInventory ~= oldAdd then
+                clientInventory.addToInventory = oldAdd
+            end
+        end)
+    end
+
+    local hotbar = State.Modules.HotbarHUD
+    if type(hotbar) == "table" then
+        if type(hotbar.paintHotbarSlot) == "function" then
+            local oldPaint = hotbar.paintHotbarSlot
+            hotbar.paintHotbarSlot = function(weaponId, ammo, skinId)
+                return oldPaint(weaponId, ammo, chooseSkin(tostring(weaponId), tostring(skinId or "base")))
+            end
+            trackRestore(function()
+                if hotbar.paintHotbarSlot ~= oldPaint then
+                    hotbar.paintHotbarSlot = oldPaint
+                end
+            end)
+        end
+
+        if type(hotbar.updateWeaponsUI) == "function" then
+            local oldUpdate = hotbar.updateWeaponsUI
+            hotbar.updateWeaponsUI = function(weaponId, ammo, skinId)
+                return oldUpdate(weaponId, ammo, chooseSkin(tostring(weaponId), tostring(skinId or "base")))
+            end
+            trackRestore(function()
+                if hotbar.updateWeaponsUI ~= oldUpdate then
+                    hotbar.updateWeaponsUI = oldUpdate
+                end
+            end)
+        end
+    end
+
+    State.LastStatus = "renderer hooks installed"
+end
+
+local function getLocalCharacterFromNeuron()
+    local neuron = State.Modules.Neuron
+    if neuron and type(neuron.get_character) == "function" then
+        local ok, character = pcall(function()
+            return neuron:get_character(LocalPlayer)
+        end)
+        if ok and character then
+            return character
+        end
+    end
+    return LocalPlayer and LocalPlayer.Character
+end
+
+local function looksLikeController(controller)
+    if type(controller) ~= "table" then
+        return false
+    end
+    return type(controller.destroy) == "function"
+        or type(controller.Destroy) == "function"
+        or type(controller.gunState) == "table"
+        or controller.weaponID ~= nil
+        or controller.weaponId ~= nil
+        or typeof(controller.viewModel) == "Instance"
+        or typeof(controller.viewmodel) == "Instance"
+        or typeof(controller.model) == "Instance"
+end
+
+local function controllerMatchesWeapon(controller, tableKey, weaponId)
+    if tostring(tableKey or "") == weaponId then
+        return true
+    end
+    if type(controller) ~= "table" then
+        return false
+    end
+
+    local controllerWeaponId = controller.weaponID or controller.weaponId or controller.itemID or controller.id
+    return controllerWeaponId ~= nil and tostring(controllerWeaponId) == weaponId
+end
+
+local function destroyCachedController(controller)
+    if not looksLikeController(controller) or controller.destroying then
+        return false
+    end
+
+    local ok = false
+    if type(controller.destroy) == "function" then
+        ok = pcall(function()
+            controller:destroy()
+        end)
+    end
+    if not ok and type(controller.Destroy) == "function" then
+        ok = pcall(function()
+            controller:Destroy()
+        end)
+    end
+
+    local teardown = State.Modules.Teardown
+    if not ok and type(teardown) == "table" and type(teardown.destroy) == "function" then
+        ok = pcall(function()
+            teardown.destroy(controller)
+        end)
+        if not ok then
+            ok = pcall(function()
+                teardown:destroy(controller)
+            end)
+        end
+    end
+
+    if not ok then
+        for _, field in ipairs({ "viewModel", "viewmodel", "model", "instance" }) do
+            local instance = controller[field]
+            if typeof(instance) == "Instance" then
+                ok = pcall(function()
+                    instance:Destroy()
+                end) or ok
+            end
+        end
+    end
+
+    return ok
+end
+
+local function invalidateCachedControllers(weaponId)
+    weaponId = tostring(weaponId or "")
+    if weaponId == "" then
+        return 0
+    end
+
+    local state = getLocalSimulationState()
+    if getEquippedWeaponId(state) == weaponId then
+        return 0
+    end
+
+    local removed = 0
+    local seen = {}
+
+    local function consider(owner, key, controller)
+        if type(controller) ~= "table"
+            or seen[controller]
+            or not looksLikeController(controller)
+            or not controllerMatchesWeapon(controller, key, weaponId)
+        then
+            return
+        end
+
+        seen[controller] = true
+        if destroyCachedController(controller) then
+            removed += 1
+            if type(owner) == "table" and key ~= nil then
+                owner[key] = nil
+            end
+        end
+    end
+
+    local function scanBucket(bucket)
+        if type(bucket) ~= "table" then
+            return
+        end
+
+        for key, value in pairs(bucket) do
+            if type(value) == "table" then
+                consider(bucket, key, value)
+
+                local direct = value[weaponId]
+                if type(direct) == "table" then
+                    consider(value, weaponId, direct)
+                end
+
+                for childKey, child in pairs(value) do
+                    if type(child) == "table" then
+                        consider(value, childKey, child)
+                    end
+                end
+            end
+        end
+    end
+
+    local viewModel = State.Modules.ViewModel
+    if type(viewModel) == "table" then
+        scanBucket(viewModel.activeVMCs)
+        scanBucket(viewModel.inactiveVMCs)
+        scanBucket(viewModel.cachedVMCs)
+        scanBucket(viewModel.controllers)
+    end
+
+    local registry = State.Modules.Registry
+    if type(registry) == "table" then
+        scanBucket(registry.instances)
+        scanBucket(registry.controllers)
+    end
+
+    return removed
+end
+
+local function refreshWrapFallbacks(targetWeaponIds)
+    local applied = 0
+    local seen = {}
+    local targets = nil
+
+    if targetWeaponIds ~= nil then
+        targets = {}
+        if type(targetWeaponIds) == "table" then
+            for key, value in pairs(targetWeaponIds) do
+                if value == true then
+                    targets[tostring(key)] = true
+                elseif type(key) == "number" and value ~= nil then
+                    targets[tostring(value)] = true
+                end
+            end
+        else
+            targets[tostring(targetWeaponIds)] = true
+        end
+
+        if not next(targets) then
+            targets = nil
+        end
+    end
+
+    local function consider(key, controller)
+        if type(controller) ~= "table" or seen[controller] or not looksLikeController(controller) then
+            return
+        end
+        seen[controller] = true
+
+        local weaponId = controller.weaponID or controller.weaponId or controller.itemID or controller.id or key
+        weaponId = weaponId ~= nil and tostring(weaponId) or nil
+        if weaponId ~= nil and weaponExists(weaponId) and (not targets or targets[weaponId]) then
+            applied += applyWrapFallbackToController(controller, weaponId)
+        end
+    end
+
+    local function scanBucket(bucket)
+        if type(bucket) ~= "table" then
+            return
+        end
+
+        for key, value in pairs(bucket) do
+            if type(value) == "table" then
+                consider(key, value)
+                for childKey, child in pairs(value) do
+                    if type(child) == "table" then
+                        consider(childKey, child)
+                    end
+                end
+            end
+        end
+    end
+
+    local viewModel = State.Modules.ViewModel
+    if type(viewModel) == "table" then
+        scanBucket(viewModel.activeVMCs)
+        scanBucket(viewModel.inactiveVMCs)
+        scanBucket(viewModel.cachedVMCs)
+        scanBucket(viewModel.controllers)
+        scanBucket(viewModel.viewModels)
+    end
+
+    local registry = State.Modules.Registry
+    if type(registry) == "table" then
+        scanBucket(registry.instances)
+        scanBucket(registry.controllers)
+    end
+
+    State.WrapFallbackCount = applied
+    return applied
+end
+
+local function repaintHotbar()
+    local hotbar = State.Modules.HotbarHUD
+    local clientState = State.Modules.ClientState
+    if type(hotbar) ~= "table" or type(clientState) ~= "table" then
+        return
+    end
+
+    local inventory = clientState.inventory
+    if type(inventory) == "table" and type(hotbar.paintHotbarSlot) == "function" then
+        for _, weaponId in ipairs(inventory) do
+            local gunState = clientState.gunStates and clientState.gunStates[weaponId]
+            local ammo = gunState and gunState.ammo or nil
+            local skin = gunState and gunState.skin or "base"
+            pcall(hotbar.paintHotbarSlot, weaponId, ammo, chooseSkin(tostring(weaponId), tostring(skin)))
+        end
+    end
+
+    local equipped = clientState.equippedGun or clientState.equippedItem
+    if equipped and type(hotbar.updateWeaponsUI) == "function" then
+        local gunState = clientState.gunStates and clientState.gunStates[equipped]
+        pcall(hotbar.updateWeaponsUI, equipped, gunState and gunState.ammo or nil, chooseSkin(tostring(equipped), gunState and gunState.skin or "base"))
+    end
+end
+
+local function refreshActiveControllers()
+    local state = getLocalSimulationState()
+    local equippedWeaponId = getEquippedWeaponId(state)
+    local refreshWeapons = collectRefreshWeapons()
+    local rebuilt = 0
+    local invalidated = 0
+
+    for weaponId in pairs(refreshWeapons) do
+        weaponId = tostring(weaponId)
+        if weaponId == equippedWeaponId then
+            if requestActiveSkinRebuild(weaponId) then
+                rebuilt += 1
+            end
+        else
+            invalidated += invalidateCachedControllers(weaponId)
+        end
+    end
+
+    applyClientStateOverrides(state)
+    local wrapPatches = refreshWrapFallbacks(next(refreshWeapons) and refreshWeapons or nil)
+    repaintHotbar()
+    local iconPatches = repaintWeaponSelectIcons()
+
+    if rebuilt > 0 or invalidated > 0 then
+        State.LastRefresh = string.format("rebuilt active: %d | cleared cached: %d | wraps: %d | icons: %d", rebuilt, invalidated, wrapPatches, iconPatches)
+    else
+        State.LastRefresh = "HUD refreshed | wraps: " .. tostring(wrapPatches) .. " | icons: " .. tostring(iconPatches)
+    end
+    return rebuilt + invalidated
+end
+
+local function refreshNow()
+    loadRenderModules()
+    installHooks()
+    applyLocalDataOverrides()
+    local count = refreshActiveControllers()
+    State.NeedsRefresh = false
+    State.LastStatus = "applied; " .. State.LastRefresh
+    return count
+end
+
+local function setCosmeticOverride(cosmeticType, weaponId, cosmeticId, enabled)
+    cosmeticType = tostring(cosmeticType or "skin"):lower()
+    weaponId = tostring(weaponId or "")
+    cosmeticId = tostring(cosmeticId or (cosmeticType == "skin" and "base" or "none"))
+    local info, overrides, enabledTable = getCosmeticState(cosmeticType)
+
+    if not State.WeaponsById[weaponId] then
+        State.LastStatus = "weapon missing: " .. weaponId
+        return false
+    end
+    if not cosmeticExists(cosmeticType, weaponId, cosmeticId) then
+        State.LastStatus = info.label:lower() .. " missing: " .. weaponId .. "/" .. cosmeticId
+        return false
+    end
+
+    overrides[weaponId] = cosmeticId
+    if enabled ~= nil then
+        enabledTable[weaponId] = enabled == true
+    else
+        enabledTable[weaponId] = true
+    end
+    markWeaponForRefresh(weaponId)
+    State.NeedsRefresh = true
+    State.LastStatus = "selected " .. info.label .. ": " .. currentCosmeticLabel(cosmeticType, weaponId)
+    return true
+end
+
+local function setOverride(weaponId, skinId, enabled)
+    return setCosmeticOverride("skin", weaponId, skinId, enabled)
+end
+
+local function clearCosmeticOverride(cosmeticType, weaponId)
+    cosmeticType = tostring(cosmeticType or "skin"):lower()
+    weaponId = tostring(weaponId or "")
+    local info, overrides, enabled = getCosmeticState(cosmeticType)
+    overrides[weaponId] = cosmeticType == "skin" and "base" or "none"
+    enabled[weaponId] = false
+    markWeaponForRefresh(weaponId)
+    State.NeedsRefresh = true
+    State.LastStatus = "cleared " .. info.label .. ": " .. getWeaponDisplay(weaponId)
+    return true
+end
+
+local function makeCorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 6)
+    corner.Parent = parent
+    return corner
+end
+
+local function makeStroke(parent, color, transparency)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Color3.fromRGB(80, 86, 100)
+    stroke.Transparency = transparency or 0.35
+    stroke.Thickness = 1
+    stroke.Parent = parent
+    return stroke
+end
+
+local updateStatus
+local updateModeButtons
+local rebuildWeaponRows
+local rebuildSkinRows
+
+local function updateWeaponRow(weaponId)
+    local refs = State.ButtonsByWeapon[weaponId]
+    if not refs then
+        return
+    end
+
+    local cosmeticType = State.SelectedCosmeticType
+    local _, overrides, enabledTable = getCosmeticState(cosmeticType)
+    local enabled = enabledTable[weaponId] == true
+    local selectedCosmetic = overrides[weaponId] or (cosmeticType == "skin" and "base" or "none")
+    local selected = State.SelectedWeaponId == weaponId
+    refs.row.BackgroundColor3 = selected and Color3.fromRGB(32, 54, 68) or Color3.fromRGB(26, 29, 36)
+    refs.toggle.BackgroundColor3 = enabled and Color3.fromRGB(0, 155, 125) or Color3.fromRGB(70, 42, 48)
+    refs.toggle.Text = enabled and "ON" or "OFF"
+    refs.skin.Text = activeCosmeticLabel(weaponId)
+    refs.skin.TextColor3 = cosmeticButtonColor(cosmeticType, weaponId, selectedCosmetic, Color3.fromRGB(170, 182, 196))
+end
+
+local function updateAllWeaponRows()
+    for weaponId in pairs(State.ButtonsByWeapon) do
+        updateWeaponRow(weaponId)
+    end
+end
+
+local function updateSkinHighlights()
+    local _, overrides = getCosmeticState(State.SelectedCosmeticType)
+    for skinId, button in pairs(State.SkinButtons) do
+        local selected = State.SelectedWeaponId and overrides[State.SelectedWeaponId] == skinId
+        button.BackgroundTransparency = selected and 0 or 0.1
+        button.TextColor3 = State.SkinButtonTextColors[skinId] or Color3.fromRGB(218, 224, 232)
+    end
+end
+
+local function createTextButton(parent, text, pos, size, color)
+    local button = Instance.new("TextButton")
+    button.BackgroundColor3 = color or Color3.fromRGB(42, 46, 56)
+    button.BorderSizePixel = 0
+    button.Position = pos
+    button.Size = size
+    button.Font = Enum.Font.GothamMedium
+    button.TextSize = 13
+    button.TextColor3 = Color3.fromRGB(235, 240, 245)
+    button.Text = text
+    button.AutoButtonColor = true
+    button.Parent = parent
+    makeCorner(button, 6)
+    trackInstance(button)
+    return button
+end
+
+rebuildWeaponRows = function()
+    if not State.WeaponList then
+        return
+    end
+
+    for _, child in ipairs(State.WeaponList:GetChildren()) do
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
+    end
+    State.ButtonsByWeapon = {}
+
+    local y = 0
+    for _, weapon in ipairs(State.Weapons) do
+        if State.SelectedCategory == "All" or weapon.category == State.SelectedCategory then
+            local row = Instance.new("Frame")
+            row.Name = "Weapon_" .. weapon.id
+            row.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
+            row.BorderSizePixel = 0
+            row.Position = UDim2.new(0, 0, 0, y)
+            row.Size = UDim2.new(1, -8, 0, 56)
+            row.Parent = State.WeaponList
+            makeCorner(row, 6)
+            makeStroke(row, Color3.fromRGB(66, 72, 86), 0.55)
+            trackInstance(row)
+
+            local selectButton = Instance.new("TextButton")
+            selectButton.Name = "Select"
+            selectButton.BackgroundTransparency = 1
+            selectButton.Position = UDim2.new(0, 0, 0, 0)
+            selectButton.Size = UDim2.new(1, -58, 1, 0)
+            selectButton.Text = ""
+            selectButton.Parent = row
+            trackInstance(selectButton)
+
+            local name = Instance.new("TextLabel")
+            name.BackgroundTransparency = 1
+            name.Position = UDim2.new(0, 12, 0, 6)
+            name.Size = UDim2.new(1, -80, 0, 22)
+            name.Font = Enum.Font.GothamBold
+            name.TextSize = 13
+            name.TextXAlignment = Enum.TextXAlignment.Left
+            name.TextColor3 = Color3.fromRGB(245, 247, 250)
+            name.Text = weapon.name
+            name.Parent = row
+            trackInstance(name)
+
+            local skin = Instance.new("TextLabel")
+            skin.BackgroundTransparency = 1
+            skin.Position = UDim2.new(0, 12, 0, 30)
+            skin.Size = UDim2.new(1, -80, 0, 18)
+            skin.Font = Enum.Font.Gotham
+            skin.TextSize = 12
+            skin.TextXAlignment = Enum.TextXAlignment.Left
+            skin.TextColor3 = Color3.fromRGB(170, 182, 196)
+            skin.Text = activeCosmeticLabel(weapon.id)
+            skin.Parent = row
+            trackInstance(skin)
+
+            local toggle = createTextButton(row, "OFF", UDim2.new(1, -52, 0.5, -15), UDim2.fromOffset(44, 30), Color3.fromRGB(70, 42, 48))
+            toggle.TextSize = 12
+
+            State.ButtonsByWeapon[weapon.id] = {
+                row = row,
+                toggle = toggle,
+                skin = skin,
+            }
+
+            trackConnection(selectButton.Activated:Connect(function()
+                State.SelectedWeaponId = weapon.id
+                rebuildSkinRows()
+                updateAllWeaponRows()
+                updateStatus()
+            end))
+
+            trackConnection(toggle.Activated:Connect(function()
+                local cosmeticType = State.SelectedCosmeticType
+                local _, overrides, enabled = getCosmeticState(cosmeticType)
+                enabled[weapon.id] = not enabled[weapon.id]
+                if not overrides[weapon.id] then
+                    overrides[weapon.id] = cosmeticType == "skin" and "base" or "none"
+                end
+                markWeaponForRefresh(weapon.id)
+                State.NeedsRefresh = true
+                updateWeaponRow(weapon.id)
+                updateSkinHighlights()
+                updateStatus()
+                if Config.AutoRefreshOnChange then
+                    task.defer(refreshNow)
+                end
+            end))
+
+            updateWeaponRow(weapon.id)
+            y += 62
+        end
+    end
+
+    State.WeaponList.CanvasSize = UDim2.fromOffset(0, y)
+end
+
+local function getCosmeticOptions(cosmeticType, weapon)
+    if cosmeticType == "skin" then
+        return weapon.skins
+    end
+
+    local source
+    if cosmeticType == "wrap" then
+        source = State.Wraps
+    elseif cosmeticType == "charm" then
+        source = State.Charms
+    elseif cosmeticType == "finisher" then
+        source = State.Finishers
+    else
+        source = {}
+    end
+
+    local options = {
+        {
+            id = "none",
+            name = "None",
+            rarity = "",
+            kind = "",
+        },
+    }
+    for _, option in ipairs(source) do
+        table.insert(options, option)
+    end
+    return options
+end
+
+rebuildSkinRows = function()
+    if not State.SkinList then
+        return
+    end
+
+    for _, child in ipairs(State.SkinList:GetChildren()) do
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
+    end
+    State.SkinButtons = {}
+    State.SkinButtonTextColors = {}
+
+    local weapon = State.WeaponsById[State.SelectedWeaponId]
+    if not weapon then
+        return
+    end
+
+    local cosmeticType = State.SelectedCosmeticType
+    local info = CosmeticTypeInfo[cosmeticType] or CosmeticTypeInfo.skin
+    local options = getCosmeticOptions(cosmeticType, weapon)
+
+    State.Title.Text = weapon.name
+    State.Subtitle.Text = prettyName(weapon.category) .. " | " .. tostring(#options) .. " " .. info.plural:lower()
+
+    local y = 0
+    for _, cosmetic in ipairs(options) do
+        local color = cosmeticButtonColor(cosmeticType, weapon.id, cosmetic.id, rarityColor(cosmetic.rarity))
+        local textColor = readableTextColor(color)
+        local button = Instance.new("TextButton")
+        button.Name = info.label .. "_" .. cosmetic.id
+        button.BackgroundColor3 = color
+        button.BackgroundTransparency = 0.1
+        button.BorderSizePixel = 0
+        button.Position = UDim2.new(0, 0, 0, y)
+        button.Size = UDim2.new(1, -8, 0, 40)
+        button.Font = Enum.Font.GothamMedium
+        button.TextSize = 13
+        button.TextXAlignment = Enum.TextXAlignment.Left
+        button.TextColor3 = textColor
+        local tag = cosmetic.kind ~= "" and prettyName(cosmetic.kind) or (cosmetic.rarity ~= "" and cosmetic.rarity or info.label)
+        button.Text = "  " .. cosmetic.name .. "  [" .. tag .. "]"
+        button.Parent = State.SkinList
+        makeCorner(button, 6)
+        makeStroke(button, Color3.fromRGB(20, 22, 28), 0.6)
+        trackInstance(button)
+
+        State.SkinButtons[cosmetic.id] = button
+        State.SkinButtonTextColors[cosmetic.id] = textColor
+        trackConnection(button.Activated:Connect(function()
+            if setCosmeticOverride(cosmeticType, weapon.id, cosmetic.id, true) then
+                updateWeaponRow(weapon.id)
+                updateSkinHighlights()
+                updateStatus()
+                if Config.AutoRefreshOnChange then
+                    task.defer(refreshNow)
+                end
+            end
+        end))
+
+        y += 46
+    end
+
+    State.SkinList.CanvasSize = UDim2.fromOffset(0, y)
+    updateSkinHighlights()
+end
+
+updateStatus = function()
+    if not State.StatusLabel then
+        return
+    end
+    local weapon = State.WeaponsById[State.SelectedWeaponId]
+    local info = CosmeticTypeInfo[State.SelectedCosmeticType] or CosmeticTypeInfo.skin
+    local selected = weapon and (weapon.name .. " -> " .. info.label .. ": " .. currentCosmeticLabel(State.SelectedCosmeticType, weapon.id)) or "none"
+    State.StatusLabel.Text = string.format(
+        "Enabled: %s | Mode: %s | Selected: %s\n%s | Last: %s",
+        Config.Enabled and "ON" or "OFF",
+        info.plural,
+        selected,
+        State.LastStatus,
+        State.LastRefresh
+    )
+end
+
+updateModeButtons = function()
+    for modeId, button in pairs(State.ModeButtons) do
+        local active = modeId == State.SelectedCosmeticType
+        button.BackgroundColor3 = active and Color3.fromRGB(0, 135, 115) or Color3.fromRGB(36, 40, 50)
+        button.TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(198, 208, 220)
+    end
+end
+
+local function selectCosmeticMode(cosmeticType)
+    cosmeticType = tostring(cosmeticType or "skin"):lower()
+    if not CosmeticTypeInfo[cosmeticType] then
+        return false
+    end
+    State.SelectedCosmeticType = cosmeticType
+    updateModeButtons()
+    rebuildSkinRows()
+    updateAllWeaponRows()
+    updateStatus()
+    return true
+end
+
+local function makeUI()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "IronFrostSkinChangerUI"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = safeGuiParent()
+    State.Gui = trackInstance(gui)
+
+    local root = Instance.new("Frame")
+    root.Name = "Root"
+    root.BackgroundColor3 = Color3.fromRGB(15, 17, 22)
+    root.BorderSizePixel = 0
+    root.Position = UDim2.new(0, 70, 0.5, -245)
+    root.Size = UDim2.fromOffset(690, 490)
+    root.Parent = gui
+    State.Root = root
+    makeCorner(root, 8)
+    makeStroke(root, Color3.fromRGB(82, 90, 106), 0.35)
+
+    local header = Instance.new("Frame")
+    header.BackgroundColor3 = Color3.fromRGB(23, 26, 34)
+    header.BorderSizePixel = 0
+    header.Size = UDim2.new(1, 0, 0, 48)
+    header.Parent = root
+    makeCorner(header, 8)
+    trackInstance(header)
+
+    local title = Instance.new("TextLabel")
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 16, 0, 5)
+    title.Size = UDim2.new(0, 260, 0, 22)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 16
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Text = "Ironfrost Skinchanger"
+    title.Parent = header
+    trackInstance(title)
+
+    local categories = Instance.new("Frame")
+    categories.BackgroundTransparency = 1
+    categories.Position = UDim2.new(0, 12, 0, 56)
+    categories.Size = UDim2.new(1, -24, 0, 34)
+    categories.Parent = root
+    trackInstance(categories)
+
+    local catLayout = Instance.new("UIListLayout")
+    catLayout.FillDirection = Enum.FillDirection.Horizontal
+    catLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    catLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    catLayout.Padding = UDim.new(0, 6)
+    catLayout.Parent = categories
+
+    for _, category in ipairs(State.Categories) do
+        local button = createTextButton(categories, prettyName(category), UDim2.fromOffset(0, 0), UDim2.fromOffset(math.clamp(#category * 8 + 26, 52, 110), 28), Color3.fromRGB(36, 40, 50))
+        trackConnection(button.Activated:Connect(function()
+            State.SelectedCategory = category
+            rebuildWeaponRows()
+            updateStatus()
+        end))
+    end
+
+    local left = Instance.new("Frame")
+    left.BackgroundTransparency = 1
+    left.Position = UDim2.new(0, 12, 0, 98)
+    left.Size = UDim2.new(0, 305, 1, -148)
+    left.Parent = root
+    trackInstance(left)
+
+    local weaponList = Instance.new("ScrollingFrame")
+    weaponList.Name = "WeaponList"
+    weaponList.BackgroundTransparency = 1
+    weaponList.BorderSizePixel = 0
+    weaponList.Size = UDim2.fromScale(1, 1)
+    weaponList.ScrollBarThickness = 5
+    weaponList.CanvasSize = UDim2.fromOffset(0, 0)
+    weaponList.Parent = left
+    State.WeaponList = weaponList
+    trackInstance(weaponList)
+
+    local right = Instance.new("Frame")
+    right.BackgroundColor3 = Color3.fromRGB(20, 23, 30)
+    right.BorderSizePixel = 0
+    right.Position = UDim2.new(0, 330, 0, 98)
+    right.Size = UDim2.new(1, -342, 1, -148)
+    right.Parent = root
+    makeCorner(right, 7)
+    makeStroke(right, Color3.fromRGB(64, 70, 86), 0.45)
+    trackInstance(right)
+
+    local selectedTitle = Instance.new("TextLabel")
+    selectedTitle.BackgroundTransparency = 1
+    selectedTitle.Position = UDim2.new(0, 14, 0, 10)
+    selectedTitle.Size = UDim2.new(1, -28, 0, 24)
+    selectedTitle.Font = Enum.Font.GothamBold
+    selectedTitle.TextSize = 16
+    selectedTitle.TextXAlignment = Enum.TextXAlignment.Left
+    selectedTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    selectedTitle.Text = "Weapon"
+    selectedTitle.Parent = right
+    State.Title = selectedTitle
+    trackInstance(selectedTitle)
+
+    local subtitle = Instance.new("TextLabel")
+    subtitle.BackgroundTransparency = 1
+    subtitle.Position = UDim2.new(0, 14, 0, 34)
+    subtitle.Size = UDim2.new(1, -28, 0, 18)
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.TextSize = 12
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    subtitle.TextColor3 = Color3.fromRGB(158, 170, 188)
+    subtitle.Text = ""
+    subtitle.Parent = right
+    State.Subtitle = subtitle
+    trackInstance(subtitle)
+
+    local modeY = 58
+    for index, mode in ipairs(CosmeticModes) do
+        local modeButton = createTextButton(right, mode.label, UDim2.new(0, 14 + ((index - 1) * 76), 0, modeY), UDim2.fromOffset(70, 28), Color3.fromRGB(36, 40, 50))
+        State.ModeButtons[mode.id] = modeButton
+        trackConnection(modeButton.Activated:Connect(function()
+            selectCosmeticMode(mode.id)
+        end))
+    end
+
+    local skinList = Instance.new("ScrollingFrame")
+    skinList.Name = "SkinList"
+    skinList.BackgroundTransparency = 1
+    skinList.BorderSizePixel = 0
+    skinList.Position = UDim2.new(0, 14, 0, 96)
+    skinList.Size = UDim2.new(1, -20, 1, -106)
+    skinList.ScrollBarThickness = 5
+    skinList.CanvasSize = UDim2.fromOffset(0, 0)
+    skinList.Parent = right
+    State.SkinList = skinList
+    trackInstance(skinList)
+
+    local status = Instance.new("TextLabel")
+    status.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
+    status.BorderSizePixel = 0
+    status.Position = UDim2.new(0, 12, 1, -42)
+    status.Size = UDim2.new(1, -24, 0, 32)
+    status.Font = Enum.Font.Gotham
+    status.TextSize = 11
+    status.TextWrapped = true
+    status.TextXAlignment = Enum.TextXAlignment.Left
+    status.TextColor3 = Color3.fromRGB(175, 188, 205)
+    status.Text = ""
+    status.Parent = root
+    State.StatusLabel = status
+    makeCorner(status, 6)
+    trackInstance(status)
+
+    updateModeButtons()
+    rebuildWeaponRows()
+    rebuildSkinRows()
+    updateStatus()
+end
+
+-- Armory-style visual UI override. Keeps the renderer/data hooks above intact.
+local ArmoryCategories = {
+    { id = "Primary", slot = 1 },
+    { id = "Secondary", slot = 2 },
+    { id = "Melee", slot = 3 },
+    { id = "Utility", slot = 4 },
+}
+
+local ArmoryCategoryBySlot = {
+    [1] = "Primary",
+    [2] = "Secondary",
+    [3] = "Melee",
+    [4] = "Utility",
+}
+
+local updateCategoryButtons
+
+local function armoryCategoryForWeapon(weapon)
+    return ArmoryCategoryBySlot[tonumber(weapon and weapon.slot)] or "Utility"
+end
+
+local function textMatchesSearch(text, search)
+    search = tostring(search or ""):lower()
+    if search == "" then
+        return true
+    end
+    return tostring(text or ""):lower():find(search, 1, true) ~= nil
+end
+
+local function clearGuiObjects(parent)
+    for _, child in ipairs(parent:GetChildren()) do
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
+    end
+end
+
+local function makeTextLabel(parent, text, pos, size, font, textSize, color)
+    local label = Instance.new("TextLabel")
+    label.BackgroundTransparency = 1
+    label.Position = pos
+    label.Size = size
+    label.Font = font or Enum.Font.Gotham
+    label.TextSize = textSize or 12
+    label.TextColor3 = color or Color3.fromRGB(220, 228, 238)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.TextTruncate = Enum.TextTruncate.AtEnd
+    label.Text = text or ""
+    label.Parent = parent
+    trackInstance(label)
+    return label
+end
+
+local function makeSearchBox(parent, placeholder, pos, size)
+    local box = Instance.new("TextBox")
+    box.Name = "Search"
+    box.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
+    box.BorderSizePixel = 0
+    box.Position = pos
+    box.Size = size
+    box.ClearTextOnFocus = false
+    box.Font = Enum.Font.Gotham
+    box.PlaceholderText = placeholder
+    box.PlaceholderColor3 = Color3.fromRGB(118, 130, 148)
+    box.Text = ""
+    box.TextSize = 13
+    box.TextColor3 = Color3.fromRGB(236, 241, 248)
+    box.TextXAlignment = Enum.TextXAlignment.Left
+    box.Parent = parent
+    makeCorner(box, 6)
+    makeStroke(box, Color3.fromRGB(58, 66, 80), 0.45)
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+    padding.Parent = box
+    trackInstance(padding)
+    trackInstance(box)
+    return box
+end
+
+local function hookCanvasToGrid(scroll, layout, extraPadding)
+    local function updateCanvas()
+        scroll.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + (extraPadding or 12))
+    end
+    trackConnection(layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas))
+    task.defer(updateCanvas)
+end
+
+local function getWeaponCardIconData(weaponId)
+    weaponId = tostring(weaponId or "")
+    local skinId = "base"
+    if State.OverrideEnabled[weaponId] and State.Overrides[weaponId] and skinExists(weaponId, State.Overrides[weaponId]) then
+        skinId = State.Overrides[weaponId]
+    end
+
+    local iconData = getSkinIconData(weaponId, skinId, false)
+    if iconData then
+        return iconData
+    end
+
+    local weapon = Items.all[weaponId]
+    return {
+        image = weapon and (weapon.icon or weapon.flippedIcon),
+        rectOffset = vector2FromValue(weapon and (weapon.iconPos or weapon.ImageRectOffset)),
+        rectSize = vector2FromValue(weapon and (weapon.iconSize or weapon.ImageRectSize)),
+        color = rarityColor(weapon and weapon.rarity),
+    }
+end
+
+local function firstImageFromTextureList(textureList)
+    for _, entry in ipairs(textureList) do
+        local texture = entry.data
+        local image = texture and (texture.icon or texture.Icon or texture.ID or texture.id or texture.texture or texture.Texture)
+        if image and tostring(image) ~= "" then
+            return tostring(image)
+        end
+    end
+    return nil
+end
+
+local function getCosmeticCardIconData(cosmeticType, weaponId, cosmetic)
+    cosmeticType = tostring(cosmeticType or "skin")
+    cosmetic = cosmetic or {}
+
+    if cosmeticType == "skin" then
+        local iconData = getSkinIconData(weaponId, cosmetic.id, false)
+        if iconData then
+            return iconData
+        end
+        return {
+            image = cosmetic.icon or cosmetic.flippedIcon,
+            rectOffset = vector2FromValue(cosmetic.iconPos),
+            rectSize = vector2FromValue(cosmetic.iconSize),
+            color = rarityColor(cosmetic.rarity),
+        }
+    end
+
+    if cosmetic.id == "none" then
+        return { color = Color3.fromRGB(42, 47, 58) }
+    end
+
+    if cosmeticType == "wrap" then
+        local wrapId = tostring(cosmetic.id or "")
+        local cached = State.WrapIconCache[wrapId]
+        if cached then
+            return cached
+        end
+
+        cached = {
+            image = firstImageFromTextureList(getWrapTextureList(cosmetic.id)),
+            color = fallbackWrapColor(cosmetic.id),
+        }
+        State.WrapIconCache[wrapId] = cached
+        return cached
+    end
+
+    local data = getCosmeticData(cosmeticType, weaponId, cosmetic.id)
+    local image = data and (data.icon or data.Icon or data.image or data.Image or data.thumbnail or data.Thumbnail)
+    return {
+        image = image,
+        color = colorFromValue(data and (data.color or data.Color or data.uiColor or data.primaryColor)) or rarityColor(data and data.rarity),
+    }
+end
+
+local function applyIconVisual(imageLabel, swatchFrame, iconData)
+    iconData = iconData or {}
+    local image = iconData.image
+    if image and tostring(image) ~= "" then
+        imageLabel.Visible = true
+        imageLabel.Image = tostring(image)
+        imageLabel.ImageColor3 = iconData.imageColor or Color3.new(1, 1, 1)
+        imageLabel.ImageTransparency = 0
+        imageLabel.ImageRectOffset = iconData.rectOffset or Vector2.new(0, 0)
+        imageLabel.ImageRectSize = iconData.rectSize or Vector2.new(0, 0)
+        swatchFrame.Visible = false
+    else
+        imageLabel.Visible = false
+        swatchFrame.Visible = true
+        swatchFrame.BackgroundColor3 = iconData.color or Color3.fromRGB(54, 60, 72)
+        for _, child in ipairs(swatchFrame:GetChildren()) do
+            if child:IsA("UIGradient") then
+                child:Destroy()
+            end
+        end
+    end
+end
+
+local function makeVisualCard(parent, name, subtext, iconData, selected, size)
+    local card = Instance.new("Frame")
+    card.BackgroundColor3 = selected and Color3.fromRGB(31, 53, 63) or Color3.fromRGB(24, 28, 36)
+    card.BorderSizePixel = 0
+    card.Size = size or UDim2.fromOffset(104, 130)
+    card.Parent = parent
+    makeCorner(card, 7)
+    local stroke = makeStroke(card, selected and Color3.fromRGB(0, 170, 145) or Color3.fromRGB(60, 68, 82), selected and 0.05 or 0.5)
+    trackInstance(card)
+
+    local imageBox = Instance.new("Frame")
+    imageBox.BackgroundColor3 = Color3.fromRGB(13, 15, 20)
+    imageBox.BorderSizePixel = 0
+    imageBox.Position = UDim2.new(0, 7, 0, 7)
+    imageBox.Size = UDim2.new(1, -14, 0, 76)
+    imageBox.Parent = card
+    makeCorner(imageBox, 6)
+    trackInstance(imageBox)
+
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Position = UDim2.fromOffset(4, 4)
+    imageLabel.Size = UDim2.new(1, -8, 1, -8)
+    imageLabel.ScaleType = Enum.ScaleType.Fit
+    imageLabel.Parent = imageBox
+    trackInstance(imageLabel)
+
+    local swatch = Instance.new("Frame")
+    swatch.BorderSizePixel = 0
+    swatch.Position = UDim2.fromOffset(8, 8)
+    swatch.Size = UDim2.new(1, -16, 1, -16)
+    swatch.Parent = imageBox
+    makeCorner(swatch, 6)
+    trackInstance(swatch)
+    applyIconVisual(imageLabel, swatch, iconData)
+
+    local title = makeTextLabel(card, name, UDim2.new(0, 8, 0, 88), UDim2.new(1, -16, 0, 18), Enum.Font.GothamBold, 12, Color3.fromRGB(242, 246, 252))
+    title.TextXAlignment = Enum.TextXAlignment.Center
+
+    local subtitle = makeTextLabel(card, subtext or "", UDim2.new(0, 8, 0, 108), UDim2.new(1, -16, 0, 16), Enum.Font.Gotham, 10, Color3.fromRGB(150, 164, 182))
+    subtitle.TextXAlignment = Enum.TextXAlignment.Center
+
+    local hit = Instance.new("TextButton")
+    hit.BackgroundTransparency = 1
+    hit.Text = ""
+    hit.Size = UDim2.fromScale(1, 1)
+    hit.Parent = card
+    trackInstance(hit)
+
+    return {
+        card = card,
+        stroke = stroke,
+        image = imageLabel,
+        swatch = swatch,
+        title = title,
+        subtitle = subtitle,
+        hit = hit,
+    }
+end
+
+local function updateWeaponSearchPlaceholder()
+    if State.WeaponSearchBox then
+        State.WeaponSearchBox.PlaceholderText = "Search " .. tostring(State.SelectedCategory or "weapons")
+    end
+end
+
+updateCategoryButtons = function()
+    if type(State.CategoryButtons) ~= "table" then
+        return
+    end
+    for categoryId, button in pairs(State.CategoryButtons) do
+        local active = State.SelectedCategory == categoryId
+        button.BackgroundColor3 = active and Color3.fromRGB(0, 135, 115) or Color3.fromRGB(34, 39, 50)
+        button.TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(194, 205, 220)
+    end
+    updateWeaponSearchPlaceholder()
+end
+
+updateWeaponRow = function(weaponId)
+    local refs = State.ButtonsByWeapon[weaponId]
+    if not refs then
+        return
+    end
+
+    local cosmeticType = State.SelectedCosmeticType
+    local selected = State.SelectedWeaponId == weaponId
+    local _, _, enabledTable = getCosmeticState(cosmeticType)
+    local enabled = enabledTable[weaponId] == true
+
+    refs.card.BackgroundColor3 = selected and Color3.fromRGB(31, 53, 63) or Color3.fromRGB(24, 28, 36)
+    refs.stroke.Color = selected and Color3.fromRGB(0, 170, 145) or Color3.fromRGB(60, 68, 82)
+    refs.stroke.Transparency = selected and 0.05 or 0.5
+    refs.subtitle.Text = enabled and activeCosmeticLabel(weaponId) or "No override"
+    refs.subtitle.TextColor3 = enabled and Color3.fromRGB(111, 222, 197) or Color3.fromRGB(150, 164, 182)
+    applyIconVisual(refs.image, refs.swatch, getWeaponCardIconData(weaponId))
+end
+
+updateAllWeaponRows = function()
+    for weaponId in pairs(State.ButtonsByWeapon) do
+        updateWeaponRow(weaponId)
+    end
+end
+
+updateSkinHighlights = function()
+    local cosmeticType = State.SelectedCosmeticType
+    local _, overrides, enabledTable = getCosmeticState(cosmeticType)
+    for cosmeticId, refs in pairs(State.SkinButtons) do
+        local selected = State.SelectedWeaponId
+            and overrides[State.SelectedWeaponId] == cosmeticId
+            and (cosmeticType == "skin" or enabledTable[State.SelectedWeaponId] == true)
+        refs.card.BackgroundColor3 = selected and Color3.fromRGB(33, 55, 64) or Color3.fromRGB(24, 28, 36)
+        refs.stroke.Color = selected and Color3.fromRGB(0, 170, 145) or Color3.fromRGB(60, 68, 82)
+        refs.stroke.Transparency = selected and 0.05 or 0.5
+    end
+end
+
+rebuildWeaponRows = function()
+    if not State.WeaponGrid or not State.WeaponGridLayout then
+        return
+    end
+
+    clearGuiObjects(State.WeaponGrid)
+    State.ButtonsByWeapon = {}
+
+    local count = 0
+    for _, weapon in ipairs(State.Weapons) do
+        if armoryCategoryForWeapon(weapon) == State.SelectedCategory
+            and (textMatchesSearch(weapon.name, State.WeaponSearchText) or textMatchesSearch(weapon.id, State.WeaponSearchText))
+        then
+            count += 1
+            local selected = State.SelectedWeaponId == weapon.id
+            local refs = makeVisualCard(State.WeaponGrid, weapon.name, "No override", getWeaponCardIconData(weapon.id), selected, UDim2.fromOffset(104, 130))
+            State.ButtonsByWeapon[weapon.id] = refs
+
+            trackConnection(refs.hit.Activated:Connect(function()
+                State.SelectedWeaponId = weapon.id
+                rebuildSkinRows()
+                updateAllWeaponRows()
+                updateStatus()
+            end))
+
+            updateWeaponRow(weapon.id)
+        end
+    end
+
+    if count == 0 then
+        local empty = makeTextLabel(State.WeaponGrid, "No weapons found", UDim2.fromOffset(0, 0), UDim2.fromOffset(300, 28), Enum.Font.GothamMedium, 13, Color3.fromRGB(150, 164, 182))
+        empty.BackgroundTransparency = 1
+    end
+
+    task.defer(function()
+        if State.WeaponList and State.WeaponGridLayout then
+            State.WeaponList.CanvasSize = UDim2.fromOffset(0, State.WeaponGridLayout.AbsoluteContentSize.Y + 12)
+        end
+    end)
+end
+
+rebuildSkinRows = function()
+    if not State.CosmeticGrid or not State.CosmeticGridLayout then
+        return
+    end
+
+    clearGuiObjects(State.CosmeticGrid)
+    State.SkinButtons = {}
+    State.SkinButtonTextColors = {}
+
+    local weapon = State.WeaponsById[State.SelectedWeaponId]
+    if not weapon then
+        return
+    end
+
+    local cosmeticType = State.SelectedCosmeticType
+    local info = CosmeticTypeInfo[cosmeticType] or CosmeticTypeInfo.skin
+    local options = getCosmeticOptions(cosmeticType, weapon)
+    local search = State.CosmeticSearchText
+
+    if State.Title then
+        State.Title.Text = weapon.name
+    end
+    if State.Subtitle then
+        State.Subtitle.Text = armoryCategoryForWeapon(weapon) .. " | " .. tostring(#options) .. " " .. info.plural:lower()
+    end
+    if State.CosmeticSearchBox then
+        State.CosmeticSearchBox.PlaceholderText = "Search " .. info.plural
+    end
+
+    local shown = 0
+    for _, cosmetic in ipairs(options) do
+        if textMatchesSearch(cosmetic.name, search) or textMatchesSearch(cosmetic.id, search) or textMatchesSearch(cosmetic.rarity, search) then
+            shown += 1
+            local tag = cosmetic.kind ~= "" and prettyName(cosmetic.kind) or (cosmetic.rarity ~= "" and cosmetic.rarity or info.label)
+            local selected = State.SelectedWeaponId and getCosmeticState(cosmeticType)
+            local iconData = getCosmeticCardIconData(cosmeticType, weapon.id, cosmetic)
+            local refs = makeVisualCard(
+                State.CosmeticGrid,
+                cosmetic.name,
+                tag,
+                iconData,
+                false,
+                UDim2.fromOffset(112, 132)
+            )
+            State.SkinButtons[cosmetic.id] = refs
+            State.SkinButtonTextColors[cosmetic.id] = refs.title.TextColor3
+
+            trackConnection(refs.hit.Activated:Connect(function()
+                if setCosmeticOverride(cosmeticType, weapon.id, cosmetic.id, true) then
+                    updateWeaponRow(weapon.id)
+                    updateSkinHighlights()
+                    updateStatus()
+                    if Config.AutoRefreshOnChange then
+                        task.defer(refreshNow)
+                    end
+                end
+            end))
+        end
+    end
+
+    if shown == 0 then
+        local empty = makeTextLabel(State.CosmeticGrid, "No cosmetics found", UDim2.fromOffset(0, 0), UDim2.fromOffset(330, 28), Enum.Font.GothamMedium, 13, Color3.fromRGB(150, 164, 182))
+        empty.BackgroundTransparency = 1
+    end
+
+    task.defer(function()
+        if State.CosmeticList and State.CosmeticGridLayout then
+            State.CosmeticList.CanvasSize = UDim2.fromOffset(0, State.CosmeticGridLayout.AbsoluteContentSize.Y + 12)
+        end
+    end)
+    updateSkinHighlights()
+end
+
+updateStatus = function()
+    if not State.StatusLabel then
+        return
+    end
+    local weapon = State.WeaponsById[State.SelectedWeaponId]
+    local info = CosmeticTypeInfo[State.SelectedCosmeticType] or CosmeticTypeInfo.skin
+    local selected = weapon and (weapon.name .. " | " .. info.label .. ": " .. currentCosmeticLabel(State.SelectedCosmeticType, weapon.id)) or "none"
+    State.StatusLabel.Text = string.format(
+        "%s | %s | %s",
+        Config.Enabled and "Enabled" or "Disabled",
+        selected,
+        State.LastRefresh
+    )
+end
+
+updateModeButtons = function()
+    local info = CosmeticTypeInfo[State.SelectedCosmeticType] or CosmeticTypeInfo.skin
+    for modeId, button in pairs(State.ModeButtons) do
+        local active = modeId == State.SelectedCosmeticType
+        button.BackgroundColor3 = active and Color3.fromRGB(0, 135, 115) or Color3.fromRGB(34, 39, 50)
+        button.TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(194, 205, 220)
+    end
+    if State.CosmeticSearchBox then
+        State.CosmeticSearchBox.PlaceholderText = "Search " .. info.plural
+    end
+end
+
+selectCosmeticMode = function(cosmeticType)
+    cosmeticType = tostring(cosmeticType or "skin"):lower()
+    if not CosmeticTypeInfo[cosmeticType] then
+        return false
+    end
+    State.SelectedCosmeticType = cosmeticType
+    State.CosmeticSearchText = ""
+    if State.CosmeticSearchBox then
+        State.CosmeticSearchBox.Text = ""
+    end
+    updateModeButtons()
+    rebuildSkinRows()
+    updateAllWeaponRows()
+    updateStatus()
+    return true
+end
+
+local function makeDraggable(root, handle)
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+
+    trackConnection(handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = root.Position
+            trackConnection(input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end))
+        end
+    end))
+
+    trackConnection(UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            root.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end))
+end
+
+makeUI = function()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "IronFrostSkinChangerUI"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = safeGuiParent()
+    State.Gui = trackInstance(gui)
+
+    if not State.SelectedCategory or not ArmoryCategoryBySlot[({ Primary = 1, Secondary = 2, Melee = 3, Utility = 4 })[State.SelectedCategory]] then
+        State.SelectedCategory = "Primary"
+    end
+
+    local root = Instance.new("Frame")
+    root.Name = "Root"
+    root.BackgroundColor3 = Color3.fromRGB(14, 17, 23)
+    root.BorderSizePixel = 0
+    root.Position = UDim2.new(0, 58, 0.5, -310)
+    root.Size = UDim2.fromOffset(940, 620)
+    root.Parent = gui
+    State.Root = root
+    makeCorner(root, 8)
+    makeStroke(root, Color3.fromRGB(74, 84, 102), 0.3)
+
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
+    header.BorderSizePixel = 0
+    header.Size = UDim2.new(1, 0, 0, 46)
+    header.Parent = root
+    makeCorner(header, 8)
+    trackInstance(header)
+    makeDraggable(root, header)
+
+    makeTextLabel(header, "Ironfrost Skinchanger", UDim2.new(0, 16, 0, 12), UDim2.new(0, 300, 0, 22), Enum.Font.GothamBold, 16, Color3.fromRGB(255, 255, 255))
+
+    local left = Instance.new("Frame")
+    left.Name = "WeaponsPanel"
+    left.BackgroundColor3 = Color3.fromRGB(18, 22, 30)
+    left.BorderSizePixel = 0
+    left.Position = UDim2.new(0, 12, 0, 58)
+    left.Size = UDim2.new(0, 352, 1, -70)
+    left.Parent = root
+    makeCorner(left, 7)
+    makeStroke(left, Color3.fromRGB(56, 64, 80), 0.45)
+    trackInstance(left)
+
+    makeTextLabel(left, "Weapons", UDim2.new(0, 12, 0, 8), UDim2.new(0, 140, 0, 20), Enum.Font.GothamBold, 14, Color3.fromRGB(246, 249, 254))
+
+    local categoryHolder = Instance.new("Frame")
+    categoryHolder.BackgroundTransparency = 1
+    categoryHolder.Position = UDim2.new(0, 10, 0, 34)
+    categoryHolder.Size = UDim2.new(1, -20, 0, 34)
+    categoryHolder.Parent = left
+    trackInstance(categoryHolder)
+
+    local categoryLayout = Instance.new("UIListLayout")
+    categoryLayout.FillDirection = Enum.FillDirection.Horizontal
+    categoryLayout.Padding = UDim.new(0, 6)
+    categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    categoryLayout.Parent = categoryHolder
+    trackInstance(categoryLayout)
+
+    State.CategoryButtons = {}
+    for _, category in ipairs(ArmoryCategories) do
+        local button = createTextButton(categoryHolder, category.id, UDim2.fromOffset(0, 0), UDim2.fromOffset(77, 30), Color3.fromRGB(34, 39, 50))
+        button.LayoutOrder = category.slot
+        State.CategoryButtons[category.id] = button
+        trackConnection(button.Activated:Connect(function()
+            State.SelectedCategory = category.id
+            State.WeaponSearchText = ""
+            if State.WeaponSearchBox then
+                State.WeaponSearchBox.Text = ""
+            end
+            updateCategoryButtons()
+            rebuildWeaponRows()
+            updateStatus()
+        end))
+    end
+
+    local weaponSearch = makeSearchBox(left, "Search Primary", UDim2.new(0, 10, 0, 76), UDim2.new(1, -20, 0, 32))
+    State.WeaponSearchBox = weaponSearch
+    trackConnection(weaponSearch:GetPropertyChangedSignal("Text"):Connect(function()
+        State.WeaponSearchText = weaponSearch.Text
+        rebuildWeaponRows()
+    end))
+
+    local weaponScroll = Instance.new("ScrollingFrame")
+    weaponScroll.Name = "WeaponList"
+    weaponScroll.BackgroundTransparency = 1
+    weaponScroll.BorderSizePixel = 0
+    weaponScroll.Position = UDim2.new(0, 10, 0, 118)
+    weaponScroll.Size = UDim2.new(1, -15, 1, -128)
+    weaponScroll.ScrollBarThickness = 5
+    weaponScroll.CanvasSize = UDim2.fromOffset(0, 0)
+    weaponScroll.Parent = left
+    State.WeaponList = weaponScroll
+    State.WeaponGrid = weaponScroll
+    trackInstance(weaponScroll)
+
+    local weaponPadding = Instance.new("UIPadding")
+    weaponPadding.PaddingTop = UDim.new(0, 2)
+    weaponPadding.PaddingLeft = UDim.new(0, 2)
+    weaponPadding.Parent = weaponScroll
+    trackInstance(weaponPadding)
+
+    local weaponGrid = Instance.new("UIGridLayout")
+    weaponGrid.CellSize = UDim2.fromOffset(104, 130)
+    weaponGrid.CellPadding = UDim2.fromOffset(8, 8)
+    weaponGrid.SortOrder = Enum.SortOrder.LayoutOrder
+    weaponGrid.Parent = weaponScroll
+    State.WeaponGridLayout = weaponGrid
+    trackInstance(weaponGrid)
+    hookCanvasToGrid(weaponScroll, weaponGrid, 12)
+
+    local right = Instance.new("Frame")
+    right.Name = "CosmeticsPanel"
+    right.BackgroundColor3 = Color3.fromRGB(18, 22, 30)
+    right.BorderSizePixel = 0
+    right.Position = UDim2.new(0, 376, 0, 58)
+    right.Size = UDim2.new(1, -388, 1, -70)
+    right.Parent = root
+    makeCorner(right, 7)
+    makeStroke(right, Color3.fromRGB(56, 64, 80), 0.45)
+    trackInstance(right)
+
+    local selectedTitle = makeTextLabel(right, "Weapon", UDim2.new(0, 14, 0, 8), UDim2.new(0, 250, 0, 22), Enum.Font.GothamBold, 16, Color3.fromRGB(255, 255, 255))
+    State.Title = selectedTitle
+    local subtitle = makeTextLabel(right, "", UDim2.new(0, 14, 0, 31), UDim2.new(0, 310, 0, 17), Enum.Font.Gotham, 12, Color3.fromRGB(156, 170, 188))
+    State.Subtitle = subtitle
+
+    State.ModeButtons = {}
+    local modeHolder = Instance.new("Frame")
+    modeHolder.BackgroundTransparency = 1
+    modeHolder.Position = UDim2.new(0, 14, 0, 58)
+    modeHolder.Size = UDim2.new(1, -28, 0, 34)
+    modeHolder.Parent = right
+    trackInstance(modeHolder)
+    local modeLayout = Instance.new("UIListLayout")
+    modeLayout.FillDirection = Enum.FillDirection.Horizontal
+    modeLayout.Padding = UDim.new(0, 8)
+    modeLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    modeLayout.Parent = modeHolder
+    trackInstance(modeLayout)
+    for index, mode in ipairs(CosmeticModes) do
+        local width = mode.id == "finisher" and 88 or 78
+        local modeButton = createTextButton(modeHolder, mode.label, UDim2.fromOffset(0, 0), UDim2.fromOffset(width, 30), Color3.fromRGB(34, 39, 50))
+        modeButton.LayoutOrder = index
+        State.ModeButtons[mode.id] = modeButton
+        trackConnection(modeButton.Activated:Connect(function()
+            selectCosmeticMode(mode.id)
+        end))
+    end
+
+    local cosmeticSearch = makeSearchBox(right, "Search Skins", UDim2.new(0, 14, 0, 102), UDim2.new(1, -28, 0, 32))
+    State.CosmeticSearchBox = cosmeticSearch
+    trackConnection(cosmeticSearch:GetPropertyChangedSignal("Text"):Connect(function()
+        State.CosmeticSearchText = cosmeticSearch.Text
+        rebuildSkinRows()
+    end))
+
+    local cosmeticScroll = Instance.new("ScrollingFrame")
+    cosmeticScroll.Name = "CosmeticList"
+    cosmeticScroll.BackgroundTransparency = 1
+    cosmeticScroll.BorderSizePixel = 0
+    cosmeticScroll.Position = UDim2.new(0, 14, 0, 144)
+    cosmeticScroll.Size = UDim2.new(1, -19, 1, -192)
+    cosmeticScroll.ScrollBarThickness = 5
+    cosmeticScroll.CanvasSize = UDim2.fromOffset(0, 0)
+    cosmeticScroll.Parent = right
+    State.SkinList = cosmeticScroll
+    State.CosmeticList = cosmeticScroll
+    State.CosmeticGrid = cosmeticScroll
+    trackInstance(cosmeticScroll)
+
+    local cosmeticPadding = Instance.new("UIPadding")
+    cosmeticPadding.PaddingTop = UDim.new(0, 2)
+    cosmeticPadding.PaddingLeft = UDim.new(0, 2)
+    cosmeticPadding.Parent = cosmeticScroll
+    trackInstance(cosmeticPadding)
+
+    local cosmeticGrid = Instance.new("UIGridLayout")
+    cosmeticGrid.CellSize = UDim2.fromOffset(112, 132)
+    cosmeticGrid.CellPadding = UDim2.fromOffset(8, 8)
+    cosmeticGrid.SortOrder = Enum.SortOrder.LayoutOrder
+    cosmeticGrid.Parent = cosmeticScroll
+    State.CosmeticGridLayout = cosmeticGrid
+    trackInstance(cosmeticGrid)
+    hookCanvasToGrid(cosmeticScroll, cosmeticGrid, 12)
+
+    local status = Instance.new("TextLabel")
+    status.BackgroundColor3 = Color3.fromRGB(13, 16, 22)
+    status.BorderSizePixel = 0
+    status.Position = UDim2.new(0, 14, 1, -38)
+    status.Size = UDim2.new(1, -28, 0, 28)
+    status.Font = Enum.Font.Gotham
+    status.TextSize = 11
+    status.TextWrapped = true
+    status.TextXAlignment = Enum.TextXAlignment.Left
+    status.TextColor3 = Color3.fromRGB(175, 188, 205)
+    status.Text = ""
+    status.Parent = right
+    State.StatusLabel = status
+    makeCorner(status, 6)
+    trackInstance(status)
+
+    updateCategoryButtons()
+    updateModeButtons()
+    rebuildWeaponRows()
+    rebuildSkinRows()
+    updateStatus()
+end
+
+local function afterCosmeticChanged(weaponId)
+    weaponId = tostring(weaponId)
+    updateWeaponRow(weaponId)
+    if State.SelectedWeaponId == weaponId then
+        updateSkinHighlights()
+    end
+    updateStatus()
+    if Config.AutoRefreshOnChange then
+        task.defer(refreshNow)
+    end
+end
+
+function State.SetSkin(weaponId, skinId, enabled)
+    local shouldEnable = enabled
+    if shouldEnable == nil then
+        shouldEnable = true
+    end
+    if setOverride(tostring(weaponId), tostring(skinId), shouldEnable == true) then
+        afterCosmeticChanged(weaponId)
+        return true
+    end
+    return false
+end
+
+function State.SetWrap(weaponId, wrapId, enabled)
+    local shouldEnable = enabled
+    if shouldEnable == nil then
+        shouldEnable = true
+    end
+    if setCosmeticOverride("wrap", tostring(weaponId), tostring(wrapId or "none"), shouldEnable == true) then
+        afterCosmeticChanged(weaponId)
+        return true
+    end
+    return false
+end
+
+function State.SetCharm(weaponId, charmId, enabled)
+    local shouldEnable = enabled
+    if shouldEnable == nil then
+        shouldEnable = true
+    end
+    if setCosmeticOverride("charm", tostring(weaponId), tostring(charmId or "none"), shouldEnable == true) then
+        afterCosmeticChanged(weaponId)
+        return true
+    end
+    return false
+end
+
+function State.SetFinisher(weaponId, finisherId, enabled)
+    local shouldEnable = enabled
+    if shouldEnable == nil then
+        shouldEnable = true
+    end
+    if setCosmeticOverride("finisher", tostring(weaponId), tostring(finisherId or "none"), shouldEnable == true) then
+        afterCosmeticChanged(weaponId)
+        return true
+    end
+    return false
+end
+
+function State.SetCosmetic(cosmeticType, weaponId, cosmeticId, enabled)
+    local shouldEnable = enabled
+    if shouldEnable == nil then
+        shouldEnable = true
+    end
+    if setCosmeticOverride(cosmeticType, tostring(weaponId), tostring(cosmeticId), shouldEnable == true) then
+        afterCosmeticChanged(weaponId)
+        return true
+    end
+    return false
+end
+
+function State.SelectCategory(category)
+    category = tostring(category or "")
+    local valid = false
+    for _, entry in ipairs(ArmoryCategories) do
+        if entry.id == category then
+            valid = true
+            break
+        end
+    end
+    if not valid then
+        return false
+    end
+
+    State.SelectedCategory = category
+    State.WeaponSearchText = ""
+    if State.WeaponSearchBox then
+        State.WeaponSearchBox.Text = ""
+    end
+    updateCategoryButtons()
+    rebuildWeaponRows()
+    updateStatus()
+    return true
+end
+
+function State.SetWeaponSearch(text)
+    State.WeaponSearchText = tostring(text or "")
+    if State.WeaponSearchBox and State.WeaponSearchBox.Text ~= State.WeaponSearchText then
+        State.WeaponSearchBox.Text = State.WeaponSearchText
+    else
+        rebuildWeaponRows()
+    end
+    return true
+end
+
+function State.SetCosmeticSearch(text)
+    State.CosmeticSearchText = tostring(text or "")
+    if State.CosmeticSearchBox and State.CosmeticSearchBox.Text ~= State.CosmeticSearchText then
+        State.CosmeticSearchBox.Text = State.CosmeticSearchText
+    else
+        rebuildSkinRows()
+    end
+    return true
+end
+
+function State.SelectMode(cosmeticType)
+    return selectCosmeticMode(cosmeticType)
+end
+
+function State.Refresh()
+    return refreshNow()
+end
+
+function State.Status()
+    local enabledCounts = {}
+    for cosmeticType in pairs(CosmeticTypeInfo) do
+        local _, _, enabledTable = getCosmeticState(cosmeticType)
+        local count = 0
+        for _, enabled in pairs(enabledTable) do
+            if enabled then
+                count += 1
+            end
+        end
+        enabledCounts[cosmeticType] = count
+    end
+    return {
+        enabled = Config.Enabled,
+        weapons = #State.Weapons,
+        selectedWeapon = State.SelectedWeaponId,
+        selectedCategory = State.SelectedCategory,
+        selectedMode = State.SelectedCosmeticType,
+        weaponSearch = State.WeaponSearchText,
+        cosmeticSearch = State.CosmeticSearchText,
+        selectedSkin = State.SelectedWeaponId and State.Overrides[State.SelectedWeaponId] or nil,
+        selectedWrap = State.SelectedWeaponId and State.WrapOverrides[State.SelectedWeaponId] or nil,
+        selectedCharm = State.SelectedWeaponId and State.CharmOverrides[State.SelectedWeaponId] or nil,
+        selectedFinisher = State.SelectedWeaponId and State.FinisherOverrides[State.SelectedWeaponId] or nil,
+        enabledOverrides = enabledCounts,
+        iconPatches = State.IconPatchCount,
+        wrapFallbackPatches = State.WrapFallbackCount,
+        hooked = State.Hooked,
+        lastStatus = State.LastStatus,
+        lastRefresh = State.LastRefresh,
+    }
+end
+
+function State.Cleanup()
+    if not State.Alive then
+        return
+    end
+    State.Alive = false
+
+    pcall(restoreAllWrapFallbacks)
+    pcall(restoreAllPatchedIcons)
+    pcall(restoreAllLocalDataOverrides)
+
+    for index = #State.Restores, 1, -1 do
+        pcall(State.Restores[index])
+    end
+    table.clear(State.Restores)
+
+    for _, connection in ipairs(State.Connections) do
+        pcall(function()
+            connection:Disconnect()
+        end)
+    end
+    table.clear(State.Connections)
+
+    for _, instance in ipairs(State.Instances) do
+        pcall(function()
+            instance:Destroy()
+        end)
+    end
+    table.clear(State.Instances)
+
+    if rawget(_G, RUN_KEY) == State then
+        _G[RUN_KEY] = nil
+    end
+
+end
+
+collectWeapons()
+installHooks()
+makeUI()
+hideDesktopMobileSlotGhosts()
+
+trackConnection(UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then
+        return
+    end
+    if input.KeyCode == Config.ToggleKey and State.Root then
+        State.Root.Visible = not State.Root.Visible
+    elseif input.KeyCode == Config.CleanupKey then
+        State.Cleanup()
+    end
+end))
+
+task.spawn(function()
+    while State.Alive do
+        task.wait(Config.RefreshInterval)
+        if State.NeedsRefresh then
+            refreshNow()
+            updateStatus()
+        elseif Config.Enabled and hasEnabledSkinIconOverride() then
+            repaintWeaponSelectIcons()
+        end
+    end
+end)
+
+return true
